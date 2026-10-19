@@ -133,9 +133,93 @@
           "template": "add_devices"
         }
       ]
+    },
+    {
+      "id": "light",
+      "name": {
+        "en": "Fan light",
+        "nl": "Ventilatorlamp",
+        "de": "Ventilatorlampe",
+        "fr": "Lampe de ventilateur"
+      },
+      "images": {
+        "large": "/drivers/light/assets/images/large.png",
+        "small": "/drivers/light/assets/images/small.png"
+      },
+      "class": "light",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "rf433"
+      ],
+      "rf433": {
+        "satelliteMode": true
+      },
+      "capabilities": [
+        "onoff",
+        "dim",
+        "lucci_brighter",
+        "lucci_dimmer"
+      ],
+      "capabilitiesOptions": {
+        "dim": {
+          "preventInsights": true
+        }
+      },
+      "pair": [
+        {
+          "id": "learn",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "calibrate"
+        }
+      ]
     }
   ],
   "capabilities": {
+    "lucci_brighter": {
+      "type": "boolean",
+      "title": {
+        "en": "Brighter",
+        "nl": "Helderder",
+        "de": "Heller",
+        "fr": "Plus clair"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
+    "lucci_dimmer": {
+      "type": "boolean",
+      "title": {
+        "en": "Dimmer",
+        "nl": "Zachter",
+        "de": "Dunkler",
+        "fr": "Plus sombre"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
     "lucci_direction": {
       "type": "enum",
       "title": {

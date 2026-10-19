@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Dimmer",
+    "nl": "Zachter",
+    "de": "Dunkler",
+    "fr": "Plus sombre"
+  },
+  "getable": false,
+  "setable": true,
+  "uiComponent": "button",
+  "uiQuickAction": false
+}

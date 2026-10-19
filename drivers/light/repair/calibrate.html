@@ -1,0 +1,93 @@
+<style>
+    .lucci-calibrate {
+        min-height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: var(--homey-su-4) var(--homey-su-3);
+    }
+
+    .lucci-message {
+        font-size: var(--homey-font-size-default);
+        font-weight: var(--homey-font-weight-medium);
+        color: var(--homey-color-text);
+        margin: 0 0 var(--homey-su-1);
+    }
+
+    .lucci-hint {
+        font-size: var(--homey-font-size-small);
+        color: var(--homey-color-text-light);
+        margin: 0 0 var(--homey-su-3);
+        max-width: 340px;
+    }
+
+    .lucci-choice {
+        display: flex;
+        flex-direction: column;
+        gap: var(--homey-su-2);
+        width: 100%;
+        max-width: 280px;
+    }
+</style>
+
+<div class="lucci-calibrate" id="container">
+    <p class="lucci-message" id="message"></p>
+    <p class="lucci-hint" id="hint"></p>
+
+    <div class="lucci-choice" id="choice">
+        <button class="homey-button-primary-full" id="dimmest"></button>
+        <button class="homey-button-secondary-full" id="brightest"></button>
+    </div>
+
+    <button class="homey-button-primary-full" id="done" style="display: none; max-width: 280px;"></button>
+</div>
+
+<script type="application/javascript">
+    var container = document.getElementById('container');
+    var message = document.getElementById('message');
+    var hint = document.getElementById('hint');
+    var choice = document.getElementById('choice');
+    var done = document.getElementById('done');
+
+    Homey.setTitle(Homey.__('calibrate.title'));
+    document.getElementById('dimmest').textContent = Homey.__('calibrate.to_dimmest');
+    document.getElementById('brightest').textContent = Homey.__('calibrate.to_brightest');
+    done.textContent = Homey.__('calibrate.finish');
+
+    function ask() {
+        message.textContent = Homey.__('calibrate.intro');
+        hint.textContent = Homey.__('calibrate.intro_hint');
+        choice.style.display = 'flex';
+        done.style.display = 'none';
+    }
+
+    function run(end) {
+        choice.style.display = 'none';
+        message.textContent = Homey.__('calibrate.running');
+        hint.textContent = Homey.__('calibrate.running_hint');
+
+        Homey.emit('calibrate', { end: end })
+            .then(function (seconds) {
+                message.textContent = Homey.__('calibrate.started');
+                hint.textContent = Homey.__('calibrate.started_hint', { seconds: seconds });
+                done.style.display = 'inline-grid';
+            })
+            .catch(function (err) {
+                message.textContent = Homey.__('calibrate.failed');
+                hint.textContent = (err && err.message) || '';
+                choice.style.display = 'flex';
+            });
+    }
+
+    document.getElementById('dimmest').addEventListener('click', function () { run('dimmest'); });
+    document.getElementById('brightest').addEventListener('click', function () { run('brightest'); });
+
+    // A repair view is the whole session rather than a step on the way
+    // somewhere, so it finishes with Homey.done() instead of advancing.
+    done.addEventListener('click', function () { Homey.done(); });
+
+    ask();
+</script>

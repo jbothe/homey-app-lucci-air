@@ -1,6 +1,8 @@
 {
   "errors": {
-    "not_paired": "Füge diesen Ventilator erneut hinzu, damit Homey deinen Handsender lernen kann."
+    "not_paired": "Füge diesen Ventilator erneut hinzu, damit Homey deinen Handsender lernen kann.",
+    "tx_failed": "Homey konnte nicht senden. Sieh ins App-Protokoll.",
+    "light_off": "Schalte das Licht zuerst ein — die Helligkeitstasten tun nichts, solange es aus ist."
   },
   "pair": {
     "title": "Ventilator hinzufügen",
@@ -12,6 +14,20 @@
     "timeout": "Homey hat keinen Tastendruck eines Lucci-Handsenders gehört. Bringe den Handsender näher an Homey und versuche es erneut.",
     "retry": "Erneut versuchen",
     "found_hint": "Füge nun deinen Ventilator hinzu. Homey kann ihm dieselben Codes senden wie der Handsender — der Ventilator meldet aber nichts zurück, daher zeigt Homey, was zuletzt gesendet oder mitgehört wurde.",
-    "not_learned": "Homey hat deinen Handsender noch nicht gelernt. Gehe zurück und drücke eine Taste."
+    "not_learned": "Homey hat deinen Handsender noch nicht gelernt. Gehe zurück und drücke eine Taste.",
+    "found_hint_light": "Füge nun deine Lampe hinzu. Homey kann ihr dieselben Codes senden wie der Handsender — die Lampe meldet aber nichts zurück, daher wird die Helligkeit mitgezählt und nicht gemessen. Kalibrieren geht jederzeit über Einstellungen → Wartung → Reparatur versuchen."
+  },
+  "calibrate": {
+    "title": "Helligkeit kalibrieren",
+    "intro": "Helligkeit neu festlegen",
+    "intro_hint": "Die Lampe meldet ihren Stand nie, also zählt Homey Tastendrücke, und diese Zählung kann weglaufen. Die Lampe ganz an ein Ende zu fahren korrigiert das, denn dort bleibt sie stehen statt umzuspringen. Wähle ein Ende; die Lampe muss an sein.",
+    "to_dimmest": "Auf dunkelste Stufe",
+    "to_brightest": "Auf hellste Stufe",
+    "running": "Startet",
+    "running_hint": "Die Tastendrücke gehen an den Sender.",
+    "started": "Läuft",
+    "started_hint": "Das dauert etwa {{seconds}} Sekunden. Du kannst das schließen; Homey macht weiter und weiß, wo die Lampe endet.",
+    "finish": "Fertig",
+    "failed": "Konnte nicht starten"
   }
 }

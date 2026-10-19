@@ -21,14 +21,23 @@ the protocol is no longer a hypothesis.
 | fan driver — `onoff` and speed, **confirmed on the hardware** | [`drivers/fan/`](drivers/fan) |
 | direction and timer — **confirmed on the hardware** | [`drivers/fan/device.js`](drivers/fan/device.js) |
 | follows the handset, so Homey is not left guessing | [`drivers/fan/device.js`](drivers/fan/device.js) |
-| pairing — learns the address off your own handset | [`drivers/fan/pair/learn.html`](drivers/fan/pair/learn.html) |
-| still to come | the light, flow cards, store assets |
+| the light — on/off, two step buttons, a slider, calibrate | [`drivers/light/`](drivers/light) |
+| brightness arithmetic, tested on its own | [`lib/light-position.js`](lib/light-position.js) |
+| pairing — learns the address off your own handset | [`lib/lucci-driver.js`](lib/lucci-driver.js) |
+| still to come | flow cards, store assets |
 
 Because speed, direction and the timer are absolute — the handset sends the state it is moving to,
 not "faster" — a frame Homey overhears gives the exact state rather than a hint. So using the
 handset keeps Homey honest instead of putting it out of step.
 
-Every fan code has now been commanded from Homey and answered. Only the light's three are unsent.
+Every fan code has now been commanded from Homey and answered. The light is written and none of its
+three codes has been transmitted yet.
+
+The light is the awkward one: its brightness is **relative**, one code each way at any level, so
+there is nothing to read and nothing to set. Two buttons are the honest core — one tap, one step,
+correct however the light got there. The slider works anyway because the light **saturates** at both
+ends rather than wrapping: aim past an end and the end absorbs the overshoot, which turns an estimate
+into a fact and makes calibrating something that cannot fail.
 Receiving is how the receiver's habit of dropping a burst's first bit turned up — see "Receiving"
 in [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
 

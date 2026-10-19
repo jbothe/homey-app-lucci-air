@@ -1,6 +1,8 @@
 {
   "errors": {
-    "not_paired": "Ajoutez ce ventilateur à nouveau pour que Homey puisse apprendre votre télécommande."
+    "not_paired": "Ajoutez ce ventilateur à nouveau pour que Homey puisse apprendre votre télécommande.",
+    "tx_failed": "Homey n'a pas pu émettre. Consultez le journal de l'app.",
+    "light_off": "Allumez d'abord la lampe — les commandes de luminosité ne font rien tant qu'elle est éteinte."
   },
   "pair": {
     "title": "Ajouter un ventilateur",
@@ -12,6 +14,20 @@
     "timeout": "Homey n'a entendu aucun appui sur une télécommande Lucci. Rapprochez la télécommande de Homey et réessayez.",
     "retry": "Réessayer",
     "found_hint": "Ajoutez maintenant votre ventilateur. Homey peut lui envoyer les mêmes codes que la télécommande — mais le ventilateur ne renvoie rien, donc Homey affiche ce qu'il a commandé ou entendu en dernier.",
-    "not_learned": "Homey n'a pas encore appris votre télécommande. Revenez en arrière et appuyez sur une touche."
+    "not_learned": "Homey n'a pas encore appris votre télécommande. Revenez en arrière et appuyez sur une touche.",
+    "found_hint_light": "Ajoutez maintenant votre lampe. Homey peut lui envoyer les mêmes codes que la télécommande — mais la lampe ne renvoie rien, donc la luminosité est suivie et non mesurée. Vous pouvez calibrer à tout moment via Réglages → Maintenance → Essayer de réparer."
+  },
+  "calibrate": {
+    "title": "Calibrer la luminosité",
+    "intro": "Rétablir la luminosité",
+    "intro_hint": "La lampe ne signale jamais son niveau : Homey compte les appuis, et ce compte peut dériver. Pousser la lampe jusqu'à une extrémité corrige cela, car elle s'y arrête au lieu de repartir de l'autre côté. Choisissez une extrémité ; la lampe doit être allumée.",
+    "to_dimmest": "Jusqu'au plus sombre",
+    "to_brightest": "Jusqu'au plus clair",
+    "running": "Démarrage",
+    "running_hint": "Les appuis sont confiés à l'émetteur.",
+    "started": "En cours",
+    "started_hint": "Cela prend environ {{seconds}} secondes. Vous pouvez fermer ; Homey continue et saura où la lampe arrive.",
+    "finish": "Terminé",
+    "failed": "Impossible de démarrer"
   }
 }

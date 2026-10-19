@@ -102,13 +102,27 @@ So the slider steps with presses, and the hold is kept for the one job it is exa
 
 | Target | Mechanism | Exact? |
 |---|---|---|
-| 0% or 100% | one hold, 10s (7.9s observed worst case plus margin) | **yes** — saturation |
+| 0% or 100%, position known | `|k - position|` presses **plus 4**, and let the end absorb them | **yes** — saturation |
+| 0% or 100%, position unknown | 36 presses, enough to arrive from the far side | **yes** — saturation |
 | anything else, position known | `|k - position|` presses, ~573ms each | **yes** — one press, one step |
 | anything else, position unknown | saturate to the nearer end, then step | **yes**, but slow |
-| calibrate / repair | one hold, 10s | **yes** — cannot fail |
+| calibrate / repair | 36 presses into an end stop | **yes** — cannot fail |
 
-A typical adjustment is a nudge of a few steps, so 1-2 seconds. A full-range move is ~18s by presses
-or 10s by saturating, and the extremes take the fast path anyway. Position is tracked between moves
+**The 10-second hold this table originally specified does not survive contact with Homey's
+transmitter**, and the correction is in the app rather than only here. A hold on the handset steps
+every ~219ms, but the smallest thing Homey can send is one 9-frame press — ~423ms, exactly one step —
+so ten seconds of emulated holding buys about 17 steps and **cannot cross a 32-step range.** Nothing
+was wrong with the measurement; it was a measurement of the handset, and the app is not a handset.
+
+Counting presses instead needs no rate figure at all, which was this section's own argument for
+preferring presses to a hold. The saturation is what makes it cheap: aiming at an end, the app sends
+more presses than it believes are needed and the end stop absorbs the surplus, so **an end is both
+the fastest target and the only exact one.** Four of margin covers an estimate that has drifted a few
+steps; 36 covers one that is absent entirely.
+
+A typical adjustment is a nudge of a few steps, so 1-2 seconds. A full-range move is ~18s, and
+re-establishing from nowhere ~21s — which is why it happens only when the position is unknown or
+being deliberately calibrated. Position is tracked between moves
 and corrected from what the app overhears the handset do, but it is never *relied* on: every target
 is reachable from a saturated anchor, and calibrating cannot fail.
 
@@ -220,11 +234,17 @@ against itself.
    leading-bit reading the reconstructed symbol *is* address bit 0. A preference and not a
    requirement, because a receiver that only ever delivered 24 symbols would otherwise be
    impossible to pair.
-6. **Light driver**: `onoff` and the two brightness buttons first — they need no state and no
-   timings. One thing carries over from step 5 and must not be inherited by accident: the fan's
-   2-second repeat-collapsing window is safe only for absolute commands and would silently drop
-   steps here, where one press is one step. The other worry is settled — Homey does not hear its own
-   transmissions, so the slider need not filter its own presses out. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
+6. **Light driver**: `onoff`, the two brightness buttons, the `dim` slider and a calibrate repair.
+   **Written, and not one of its three codes has been transmitted.** The fan's 2-second
+   repeat-collapsing window is deliberately *not* reused: it is safe only for absolute commands and
+   would silently drop steps here, where one press is one step. Homey not hearing its own
+   transmissions is what makes the received-press tracking sound.
+
+   The position lives in the device store rather than being read back off `dim`, because `dim` is the
+   target and is allowed to run ahead of the light while a move transmits. Each move records where it
+   got to press by press, so an interrupted one leaves a usable estimate instead of nothing, and a
+   move that reaches an end stop replaces the estimate with a fact. A press at the handset during a
+   move abandons the move: both sides are stepping the same light and only one of them is counting. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
    and a calibrate action.
 7. **Flow cards**, store assets, README and locales.
 

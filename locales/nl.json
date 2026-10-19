@@ -1,6 +1,8 @@
 {
   "errors": {
-    "not_paired": "Voeg deze ventilator opnieuw toe, zodat Homey je handzender kan leren."
+    "not_paired": "Voeg deze ventilator opnieuw toe, zodat Homey je handzender kan leren.",
+    "tx_failed": "Homey kon niet zenden. Bekijk het app-logboek.",
+    "light_off": "Zet eerst de lamp aan — de helderheidsknoppen doen niets zolang hij uit is."
   },
   "pair": {
     "title": "Ventilator toevoegen",
@@ -12,6 +14,20 @@
     "timeout": "Homey heeft geen druk op een Lucci-handzender gehoord. Houd de handzender dichter bij Homey en probeer het opnieuw.",
     "retry": "Opnieuw proberen",
     "found_hint": "Voeg nu je ventilator toe. Homey kan hem dezelfde codes sturen als de handzender — maar de ventilator meldt niets terug, dus wat Homey toont is wat hij als laatste heeft gestuurd of meegehoord.",
-    "not_learned": "Homey heeft je handzender nog niet geleerd. Ga terug en druk op een knop."
+    "not_learned": "Homey heeft je handzender nog niet geleerd. Ga terug en druk op een knop.",
+    "found_hint_light": "Voeg nu je lamp toe. Homey kan dezelfde codes sturen als de handzender — maar de lamp meldt niets terug, dus de helderheid wordt bijgehouden en niet gemeten. Kalibreren kan altijd via Instellingen → Onderhoud → Probeer te repareren."
+  },
+  "calibrate": {
+    "title": "Helderheid kalibreren",
+    "intro": "Helderheid opnieuw vastleggen",
+    "intro_hint": "De lamp meldt zijn niveau nooit, dus Homey telt drukken en die telling kan weglopen. De lamp helemaal naar één uiterste laten lopen zet dat recht, want daar stopt hij in plaats van rond te gaan. Kies een uiterste; de lamp moet aan zijn.",
+    "to_dimmest": "Naar donkerst",
+    "to_brightest": "Naar helderst",
+    "running": "Starten",
+    "running_hint": "De drukken worden aan de zender gegeven.",
+    "started": "Bezig",
+    "started_hint": "Dit duurt ongeveer {{seconds}} seconden. Je kunt dit sluiten; Homey gaat door en weet waar de lamp uitkomt.",
+    "finish": "Klaar",
+    "failed": "Kon niet starten"
   }
 }
