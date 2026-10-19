@@ -81,13 +81,13 @@ test('identifyFrame names the field as well as the command', () => {
     const light = identifyFrame(buildFrame(HANDSET, 'light.dimmer'));
     assert.deepEqual(light, {
         address: HANDSET, domain: 'light', command: 'dimmer', value: null, key: 'light.dimmer',
-        parityOk: true, restored: false, addressSure: true,
+        parityOk: true, restored: false, addressSure: true, bit24: 0,
     });
 
     const speed = identifyFrame(buildFrame(HANDSET, 'fan.speed.4'));
     assert.deepEqual(speed, {
         address: HANDSET, domain: 'fan', command: 'speed', value: '4', key: 'fan.speed.4',
-        parityOk: true, restored: false, addressSure: true,
+        parityOk: true, restored: false, addressSure: true, bit24: 0,
     });
 });
 
@@ -281,4 +281,54 @@ test('sameAddress tells one household\'s handset from another\'s', () => {
     assert.equal(sameAddress(HANDSET, HANDSET.slice(1)), false);
     assert.equal(sameAddress(HANDSET, null), false);
     assert.equal(sameAddress(undefined, undefined), false);
+});
+
+test('buildFrame sends the bit 24 it was given, not one it worked out', () => {
+    // The change the radio forced. Both values go out as asked, on an address
+    // whose even weight means even parity would have insisted on 0 either way.
+    for (const key of COMMAND_KEYS) {
+        assert.equal(buildFrame(HANDSET, key, 0)[HEAD_LENGTH], 0, key);
+        assert.equal(buildFrame(HANDSET, key, 1)[HEAD_LENGTH], 1, key);
+    }
+
+    // And the frame is otherwise untouched, so a learned bit cannot disturb the
+    // address or the command.
+    const asked = buildFrame(HANDSET, 'fan.speed.3', 1);
+    const computed = buildFrame(HANDSET, 'fan.speed.3');
+    assert.deepEqual(asked.slice(0, HEAD_LENGTH), computed.slice(0, HEAD_LENGTH));
+});
+
+test('without a bit 24 it transmits exactly what it always has', () => {
+    // Bug compatibility on purpose. A device paired before the app knew about
+    // this field has nothing stored, and quietly changing what goes on air
+    // underneath it would be worse than the limitation it lives with.
+    for (const key of COMMAND_KEYS) {
+        const fallback = buildFrame(HANDSET, key);
+        assert.deepEqual(buildFrame(HANDSET, key, null), fallback, key);
+        assert.deepEqual(buildFrame(HANDSET, key, undefined), fallback, key);
+        assert.equal(fallback[HEAD_LENGTH], evenParity(fallback.slice(0, HEAD_LENGTH)));
+    }
+});
+
+test('a bit 24 that is not a bit is refused rather than coerced', () => {
+    for (const bad of [2, -1, '1', true, [1]]) {
+        assert.throws(() => buildFrame(HANDSET, 'fan.off', bad), /Bad bit 24/);
+    }
+});
+
+test('what the radio sends round-trips through identify and build', () => {
+    // The property that makes learning the bit worth anything: whatever a
+    // handset puts in bit 24, the app reads it back and puts the same thing
+    // there. Nothing in this path consults parity.
+    for (const key of COMMAND_KEYS) {
+        for (const address of [HANDSET, ODD]) {
+            for (const bit of [0, 1]) {
+                const onAir = [...buildFrame(address, key, bit)];
+                const found = identifyFrame(onAir);
+
+                assert.equal(found.bit24, bit, `${key} ${bit}`);
+                assert.deepEqual(buildFrame(found.address, found.key, found.bit24), onAir);
+            }
+        }
+    }
 });

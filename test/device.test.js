@@ -79,9 +79,10 @@ const LucciFanDevice = require('../drivers/fan/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
-async function device({ speed, onoff } = {}) {
+async function device({ speed, onoff, bit24 } = {}) {
     const fan = new LucciFanDevice();
     fan.storeValues.address = ADDRESS;
+    if (bit24 !== undefined) fan.storeValues.bit24 = bit24;
     if (speed !== undefined) fan.capabilityValues.lucci_speed = speed;
     if (onoff !== undefined) fan.capabilityValues.onoff = onoff;
     await fan.onInit();
@@ -416,4 +417,67 @@ test('the light is heard, said once, and otherwise left alone', async () => {
     assert.equal(fan.logs.filter(line => line.includes('the light is a separate device')).length, 1);
     assert.equal(fan.capabilityValues.onoff, true, 'a light command moved the fan');
     assert.deepEqual(fan.sent, []);
+});
+
+test('the device transmits the bit 24 it was paired with', async () => {
+    // Learned from the handset, because it cannot be computed: neither parity
+    // nor a constant fits what the radio produced.
+    const one = await device({ speed: '2', onoff: false, bit24: 1 });
+    await request(one, { lucci_speed: '3' });
+    assert.equal(one.sent[0][24], 1);
+    assert.ok(one.logs.some(line => line.includes('bit 24 1')), one.logs.join(' | '));
+
+    const zero = await device({ speed: '2', onoff: false, bit24: 0 });
+    await request(zero, { lucci_speed: '3' });
+    assert.equal(zero.sent[0][24], 0);
+
+    // The two differ only there.
+    assert.deepEqual(one.sent[0].slice(0, 24), zero.sent[0].slice(0, 24));
+});
+
+test('a device paired before bit 24 was understood keeps its old behaviour', async () => {
+    // Nothing stored, so buildFrame falls back to what the app has always put on
+    // air and what this handset answers to. Changing that underneath a working
+    // device would be worse than the limitation.
+    const fan = await device({ speed: '2', onoff: false });
+    await request(fan, { lucci_speed: '3' });
+
+    assert.equal(fan.bit24, null);
+    assert.equal(fan.sent[0][24], 0, 'the fallback stopped reproducing the recordings');
+    assert.ok(fan.logs.some(line => line.includes('falling back to even parity')), fan.logs.join(' | '));
+});
+
+test('a stored bit 24 that is not a bit is treated as unknown', async () => {
+    const fan = await device({ speed: '2', bit24: 'yes' });
+    assert.equal(fan.bit24, null);
+});
+
+test('a received frame disagreeing about bit 24 is reported once', async () => {
+    // The one line that would say what bit 24 is. It is learned from a single
+    // press, so a handset varying the bit across its commands would show up
+    // here — and one holding it constant never will.
+    const fan = await device({ speed: '2', onoff: true, bit24: 0 });
+    const odd = key => {
+        const whole = buildFrame(ADDRESS, key);
+        return [...whole.slice(0, 24), 1];
+    };
+
+    await receive(fan, odd('fan.speed.4'));
+    await receive(fan, odd('fan.direction.reverse'));
+
+    const said = fan.logs.filter(line => line.includes('arrived with bit 24 1'));
+    assert.equal(said.length, 1, 'thousands of frames would be thousands of lines');
+    assert.match(said[0], /where this device stores 0/);
+
+    // And the frame is still acted on: the disagreement is about a bit nobody
+    // understands, not about whose frame it is.
+    assert.equal(fan.capabilityValues.lucci_speed, '4');
+});
+
+test('an agreeing bit 24 says nothing at all', async () => {
+    const fan = await device({ speed: '2', onoff: true, bit24: 0 });
+    await receive(fan, buildFrame(ADDRESS, 'fan.speed.4'));
+
+    assert.equal(fan.logs.filter(line => line.includes('arrived with bit 24')).length, 0);
+    assert.equal(fan.capabilityValues.lucci_speed, '4');
 });

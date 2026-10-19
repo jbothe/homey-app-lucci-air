@@ -162,15 +162,14 @@ decoding".
 
 ## The protocol module
 
-`buildFrame(address, command)` returns address(16) + selector(2) + command(6) + bit24(1).
+`buildFrame(address, command, bit24)` returns address(16) + selector(2) + command(6) + bit24(1).
 
-**Bit 24 is computed as even parity, and that is now known to be wrong.** The radio produced frames
-with an even number of ones across bits 0-23 and bit 24 set, which neither even parity nor a constant
-zero permits — see "Bit 24" in RF_PROTOCOL.md. For the paired handset the computation still yields
-`0` for every command, bit-for-bit what was recorded, so the fan works; it works because this
-handset's bit 24 is `0`, not because the rule holds. **A fan whose bit 24 is `1` cannot be driven by
-this app.** The fix is to learn bit 24 at pair time alongside the address, which is the next change
-this module needs.
+**Bit 24 is learned from the handset, not computed.** It was taken for even parity, and the radio
+disproved that: frames arrived with an even number of ones across bits 0-23 and bit 24 set, which
+neither parity nor the constant zero of all 33 recordings permits — see "Bit 24" in RF_PROTOCOL.md.
+So pairing keeps the bit alongside the address and the devices transmit what they were given, which
+is right whatever the bit turns out to mean. A device paired before the field existed falls back to
+even parity, which is what it has always transmitted and what its fan answers to.
 
 `identifyFrame(payload)` accepts 24 or 25 symbols, checks the selector is `10` or `01`, looks the
 command tail up in the table, and returns `{ address, domain, command, value }` or null. That

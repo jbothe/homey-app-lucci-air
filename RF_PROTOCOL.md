@@ -192,12 +192,25 @@ It is a reading and not a finding. Settling it needs the second handset's own re
 would show whether its bit 24 is constant across all sixteen of its commands — that is the test, and
 it is the same test the first handset was put to.
 
+**The app no longer depends on the answer.** It learns the bit rather than deriving it, so it is
+right about bit 24 whether the bit identifies a handset, a fitting, a production batch or something
+nobody has thought of. What remains unknown is what it *means*, which matters for documenting the
+protocol and not for driving a fan.
+
 ### What the app does about it
 
-- **Transmitting still computes even parity**, which for the paired handset yields `0` for every
-  command and is bit-for-bit what was recorded. It works because this handset's bit 24 is `0`, not
-  because the rule is right. **A fan whose bit 24 is `1` cannot be driven by this app**: it would
-  receive `0` where it expects `1`. Learning bit 24 at pair time, alongside the address, is the fix.
+- **Transmitting sends the bit the handset was heard to send.** It is learned at pair time alongside
+  the address and stored with it, because the only sound source for a bit that follows no rule is the
+  transmitter that produced it. A device paired before this field existed has nothing stored and
+  falls back to even parity — which is not a guess at the rule but bug compatibility: it is exactly
+  what the app used to transmit, it reproduces all 33 recordings, and the fan it is paired with
+  answers to it. Changing what goes on air underneath a working device would be worse than the
+  limitation.
+- **A learn step sees one press, so it learns one sample of the bit.** Whether a handset holds it
+  constant across its sixteen commands is checked at runtime instead, where there are thousands of
+  frames to check against: a received frame whose bit 24 disagrees with what the device stores is
+  logged once, and that line is what would show the bit varies by command rather than by handset.
+  Nothing has disagreed yet.
 - **Receiving reports the disagreement and acts on the frame anyway.** That decision was made before
   any of this was known, on the grounds that parity adds a single bit of discrimination over the
   length, the selector and the command tail, and that enforcing it could make a handset unpairable.

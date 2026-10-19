@@ -127,9 +127,19 @@ test('buildFrame reproduces the frames the handset actually sent', { skip }, () 
 
     for (const capture of allCaptures()) {
         for (const frame of cleanFrames(capture)) {
-            const { address, key } = identifyFrame(frame);
+            const { address, key, bit24 } = identifyFrame(frame);
             covered.add(key);
-            assert.deepEqual(buildFrame(address, key), frame, `${capture.label}: ${key}`);
+
+            // With bit 24 as the handset sent it — which is what the app learns
+            // at pair time and transmits, now that the bit is known not to be
+            // computable.
+            assert.deepEqual(buildFrame(address, key, bit24), frame, `${capture.label}: ${key}`);
+
+            // And without it, which is what a device paired before that field
+            // existed still transmits. Identical here, because this handset's
+            // bit 24 is 0 and its frames are of even weight — the coincidence
+            // that let the parity rule stand for as long as it did.
+            assert.deepEqual(buildFrame(address, key), frame, `${capture.label}: ${key} (fallback)`);
         }
     }
 

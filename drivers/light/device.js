@@ -38,7 +38,16 @@ class LucciLightDevice extends Homey.Device {
         // two would make every interrupted move look complete.
         const stored = this.getStoreValue('position');
         this.position = position.isStep(stored) ? stored : null;
-        this.log(`initialised; address ${this.address.join('')};`
+        // Bit 24 as this handset was heard to send it, learned at pair time
+        // because it cannot be computed: it is neither parity nor a constant.
+        // Null on a device paired before the app knew that, where buildFrame
+        // falls back to what it has always transmitted. See RF_PROTOCOL.md.
+        const bit24 = this.getStoreValue('bit24');
+        this.bit24 = bit24 === 0 || bit24 === 1 ? bit24 : null;
+        this.bit24Mismatches = 0;
+
+        this.log(`initialised; address ${this.address.join('')},`
+            + ` bit 24 ${this.bit24 === null ? 'unknown — falling back to even parity' : this.bit24};`
             + ` brightness ${this.position === null ? 'unknown' : `believed step ${this.position}`}`);
 
         this.registerCapabilityListener('onoff', this.onCapabilityOnOff.bind(this));
@@ -74,7 +83,7 @@ class LucciLightDevice extends Homey.Device {
     }
 
     async send(key, why) {
-        const payload = buildFrame(this.address, key);
+        const payload = buildFrame(this.address, key, this.bit24);
         try {
             await this.signal.tx(payload);
             return true;
@@ -252,6 +261,25 @@ class LucciLightDevice extends Homey.Device {
         return false;
     }
 
+
+    // Whether a received frame agrees with this device about bit 24.
+    //
+    // **This is the one line that would say what bit 24 actually is.** It is
+    // learned from one press, so a handset that varies the bit across its
+    // sixteen commands would disagree here — and a handset that holds it
+    // constant never will. Said once per device, because thousands of frames is
+    // not thousands of findings.
+    noteBit24(frame) {
+        if (frame.bit24 === null || this.bit24 === null) return;
+        if (frame.bit24 === this.bit24) return;
+
+        this.bit24Mismatches += 1;
+        if (this.bit24Mismatches > 1) return;
+        this.log(`${frame.key} arrived with bit 24 ${frame.bit24} where this device stores`
+            + ` ${this.bit24} — so the bit is not constant for one handset, which is`
+            + ' the thing RF_PROTOCOL.md says is unknown about it.');
+    }
+
     onRX(frame, isFirst) {
         if (isFirst === false) return;
 
@@ -263,6 +291,8 @@ class LucciLightDevice extends Homey.Device {
         if (!frame.addressSure) return;
 
         if (!sameAddress(frame.address, this.address)) return;
+
+        this.noteBit24(frame);
         if (frame.domain !== 'light') return;
 
         // **Deliberately not collapsed into a repeat window**, unlike the fan's.

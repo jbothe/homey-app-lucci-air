@@ -64,9 +64,10 @@ const LucciLightDevice = require('../drivers/light/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
-async function light({ on = true, at } = {}) {
+async function light({ on = true, at, bit24 } = {}) {
     const device = new LucciLightDevice();
     device.storeValues.address = ADDRESS;
+    if (bit24 !== undefined) device.storeValues.bit24 = bit24;
     if (at !== undefined) device.storeValues.position = at;
     device.capabilityValues.onoff = on;
     await device.onInit();
@@ -347,4 +348,30 @@ test('shutting down stops the radio and the move', async () => {
 
     assert.equal(device.rxListeners.size, 0);
     assert.equal(device.move, null);
+});
+
+test('the light transmits the bit 24 it was paired with', async () => {
+    const device = await light({ at: 10, bit24: 1 });
+    await request(device, 'lucci_brighter', true);
+
+    assert.equal(device.sent[0][24], 1);
+    assert.ok(device.logs.some(line => line.includes('bit 24 1')), device.logs.join(' | '));
+});
+
+test('a light paired before bit 24 was understood falls back', async () => {
+    const device = await light({ at: 10 });
+    await request(device, 'lucci_dimmer', true);
+
+    assert.equal(device.bit24, null);
+    assert.equal(device.sent[0][24], 0);
+});
+
+test('every press of a long move carries the learned bit', async () => {
+    // A saturating move is dozens of frames. One of them going out wrong would
+    // be a step the light ignored, and the estimate would quietly drift.
+    const device = await light({ at: 10, bit24: 1 });
+    await request(device, 'dim', 0);
+
+    assert.ok(device.sent.length > 10, `only ${device.sent.length} presses`);
+    for (const payload of device.sent) assert.equal(payload[24], 1);
 });

@@ -69,8 +69,9 @@ test('pairing takes the address off a full-length frame at once', async () => {
 
     air(fan, buildFrame(ADDRESS, 'fan.off'));
 
-    assert.deepEqual(await learning, ADDRESS);
-    assert.ok(fan.logs.some(line => line.includes('matched fan.off; address:')), fan.logs.join(' | '));
+    assert.deepEqual((await learning).address, ADDRESS);
+    assert.ok(fan.logs.some(line => line.includes('matched fan.off; address 0101110011110011')),
+        fan.logs.join(' | '));
     assert.equal(fan.rxEnabled, 0, 'RX was left on');
 });
 
@@ -83,7 +84,7 @@ test('any button pairs, including one belonging to the light', async () => {
         await settle();
 
         air(fan, buildFrame(ADDRESS, key));
-        assert.deepEqual(await learning, ADDRESS, key);
+        assert.deepEqual((await learning).address, ADDRESS, key);
     }
 });
 
@@ -104,7 +105,7 @@ test('a reconstructed frame waits, and loses to the full frame that follows', as
     assert.ok(fan.logs.some(line => line.includes('missing its leading bit')), fan.logs.join(' | '));
 
     air(fan, whole);
-    assert.deepEqual(await learning, ADDRESS);
+    assert.deepEqual((await learning).address, ADDRESS);
 });
 
 test('the full frame is taken even as a later frame of the same burst', async () => {
@@ -119,7 +120,7 @@ test('the full frame is taken even as a later frame of the same burst', async ()
     await settle();
     air(fan, whole, false);
 
-    assert.deepEqual(await learning, ADDRESS);
+    assert.deepEqual((await learning).address, ADDRESS);
 });
 
 test('a frame missing its leading bit never pairs, and the timeout says why', async () => {
@@ -172,7 +173,7 @@ test('a view that cannot be updated does not cost the user the press', async () 
 
     air(fan, buildFrame(ADDRESS, 'fan.off'));
 
-    assert.deepEqual(await learning, ADDRESS);
+    assert.deepEqual((await learning).address, ADDRESS);
     assert.ok(fan.logs.some(line => line.includes('could not update the view')), fan.logs.join(' | '));
 });
 
@@ -193,7 +194,7 @@ test('unrelated 433 MHz traffic neither pairs nor goes unmentioned', async () =>
 
     // And pairing is still listening.
     air(fan, buildFrame(ADDRESS, 'fan.off'));
-    assert.deepEqual(await learning, ADDRESS);
+    assert.deepEqual((await learning).address, ADDRESS);
 });
 
 test('RX is reference counted, so pairing twice does not strand it', async () => {
@@ -233,4 +234,41 @@ test('a device offered for pairing is named and keyed by its address', async () 
     assert.equal(device.data.id, `lucci-fan-${ADDRESS.join('')}`);
     assert.deepEqual(device.store.address, ADDRESS);
     assert.equal(device.store.address.length, ADDRESS_LENGTH);
+    // And what the handset put in bit 24, which is not computable from the rest.
+    assert.equal(device.store.bit24, 0);
+});
+
+test('pairing learns bit 24 from the handset rather than deriving it', async () => {
+    // The whole point: a handset that sends 1 there is paired as sending 1, and
+    // one that sends 0 as sending 0. Even parity would have said 0 for both,
+    // because both frames below hold an even number of ones across bits 0-23.
+    for (const bit of [0, 1]) {
+        const fan = await driver();
+        const learning = fan.learnAddress(session());
+        await settle();
+
+        const whole = buildFrame(ADDRESS, 'fan.off');
+        air(fan, [...whole.slice(0, 24), bit]);
+
+        const learned = await learning;
+        assert.deepEqual(learned.address, ADDRESS, `bit ${bit}`);
+        assert.equal(learned.bit24, bit, `bit 24 was not taken from the air`);
+        assert.ok(fan.logs.some(line => line.includes(`bit 24 ${bit}`)), fan.logs.join(' | '));
+    }
+});
+
+test('a frame that never carried bit 24 pairs without it', async () => {
+    // The trailing truncation loses bit 24 and nothing else, so the address is
+    // sound and there is simply nothing to learn for that field. The device then
+    // falls back to what the app has always transmitted.
+    const fan = await driver();
+    const learning = fan.learnAddress(session());
+    await settle();
+
+    air(fan, buildFrame(ADDRESS, 'fan.off').slice(0, 24));
+
+    const learned = await learning;
+    assert.deepEqual(learned.address, ADDRESS);
+    assert.equal(learned.bit24, null);
+    assert.ok(fan.logs.some(line => line.includes('bit 24 not heard')), fan.logs.join(' | '));
 });
