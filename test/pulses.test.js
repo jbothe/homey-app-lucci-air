@@ -418,3 +418,31 @@ test('one chopped pulse per repeat does not cost the whole reading', () => {
     assert.equal(result.discarded.length, 1);
     assert.notEqual(result.discarded[0][0], BINARY_FRAME);
 });
+
+test('a capture holding several presses reports them in the order sent', () => {
+    // The recorder keeps running, so one recording can hold a whole sequence of
+    // presses. For a button that cycles through states — the Lucci timer walks
+    // a zero across four positions — the order is the finding: it is what shows
+    // the cycle, and what shows it closing. Ranking readings by how often each
+    // appeared hides both completely.
+    const cycle = [
+        `${ADDRESS}110111 0`.replace(/ /g, ''),
+        `${ADDRESS}111011 0`.replace(/ /g, ''),
+        `${ADDRESS}111101 0`.replace(/ /g, ''),
+        `${ADDRESS}111110 0`.replace(/ /g, ''),
+    ];
+    const pressed = [...cycle, cycle[0]];
+    const frames = pressed.flatMap(frame => repeat(bits(frame), 4));
+
+    const result = analyseCapture(synthesise({ ...BINARY, frames, jitter: 10 }));
+
+    assert.deepEqual(result.runs.map(r => r.bits), pressed);
+    assert.deepEqual(result.runs.map(r => r.count), [4, 4, 4, 4, 4]);
+
+    // The cycle closing is visible as the first and last run agreeing, while
+    // the frequency-ranked view shows the first code twice as often as the rest
+    // and says nothing about why.
+    assert.equal(result.runs[0].bits, result.runs[result.runs.length - 1].bits);
+    assert.equal(result.distinct.length, 4);
+    assert.equal(result.distinct[0][1], 8);
+});

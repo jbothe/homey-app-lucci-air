@@ -661,6 +661,20 @@ function analyseCaptures(blocks) {
             tally.set(key, (tally.get(key) || 0) + 1);
         }
 
+        // Readings in the order they went out, grouped into runs. A capture can
+        // hold more than one press — the recorder keeps going — and then the
+        // order is the finding: a button that cycles through states shows its
+        // cycle here, and nothing else in this report would reveal it. Ranking
+        // by how often a reading appeared hides it completely.
+        const runs = [];
+        for (const frame of c.whole) {
+            const symbols = decodeFrame(frame, alignment);
+            const key = symbols.includes(null) ? null : symbols.join('');
+            const last = runs[runs.length - 1];
+            if (last !== undefined && last.bits === key) last.count += 1;
+            else runs.push({ bits: key, count: 1 });
+        }
+
         // Corroborated readings, and the ones left over. A press that really
         // alternates two forms shows both here; a glitched frame shows up in
         // the leftovers, where it is reported but kept out of the field map.
@@ -700,6 +714,7 @@ function analyseCaptures(blocks) {
             unreadable,
             distinct,
             discarded,
+            runs,
             interval: intervals.length > 0 ? Math.round(mean(intervals)) : null,
             separator: measured.length > 0 ? Math.round(mean(measured)) : null,
         };

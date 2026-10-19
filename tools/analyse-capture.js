@@ -126,9 +126,25 @@ for (const r of reads) {
         console.log(`    x${String(count).padEnd(3)} ${bits}  (uncorroborated, ignored)`);
     }
 
+    // More than one reading, and the order is the finding rather than a fault:
+    // the recorder keeps running, so a capture can hold several presses, and a
+    // button that cycles through states shows its cycle here. Nothing else in
+    // this report would reveal it.
+    if (r.runs.length > 1) {
+        console.log('    in the order sent:');
+        for (const run of r.runs) {
+            console.log(`      x${String(run.count).padEnd(3)} ${run.bits === null ? '(unreadable)' : run.bits}`);
+        }
+    }
+
     if (r.distinct.length > 1) {
-        warnings.push(`"${r.label}" decoded ${r.distinct.length} different ways`
-            + ' — either the handset alternates forms within one press, or the capture is dirty');
+        const cycles = r.runs.length > 2 && r.runs[0].bits === r.runs[r.runs.length - 1].bits;
+        warnings.push(`"${r.label}" decoded ${r.distinct.length} different ways.`
+            + (cycles
+                ? ' The order sent returns to where it started, so this capture holds several'
+                    + ' presses of a button that cycles through states — each needs its own label'
+                : ' Either the capture holds more than one press, the handset alternates forms'
+                    + ' within one press, or the capture is dirty — check the order sent above'));
     }
     if (r.distinct.some(([bits]) => bits.length !== symbolLength)) {
         warnings.push(`"${r.label}" has a frame of a different length to the rest`);
