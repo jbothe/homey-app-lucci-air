@@ -17,40 +17,45 @@ recorder** under the RF or 433 MHz tools. Put the handset within a metre or so o
 one button once, and copy out the list of numbers it produces — raw pulse and gap durations in
 microseconds, one press per recording.
 
-Record **fourteen** times: each of the seven buttons, twice.
+Record **every button, several times each**. The handset has eight controls, not the seven a
+glance suggests — the timer is easy to miss:
 
-| Pass | Label to use |
+| Control | What to record |
 |---|---|
-| A | `Fan On/Off:` |
-| A | `Fan Speed Up:` |
-| A | `Fan Speed Down:` |
-| A | `Fan Direction:` |
-| A | `Light On/Off:` |
-| A | `Light Brightness Up:` |
-| A | `Light Brightness Down:` |
-| B | `Fan On/Off (repeat):` |
-| B | `Fan Speed Up (repeat):` |
-| B | `Fan Speed Down (repeat):` |
-| B | `Fan Direction (repeat):` |
-| B | `Light On/Off (repeat):` |
-| B | `Light Brightness Up (repeat):` |
-| B | `Light Brightness Down (repeat):` |
+| Power (off) | 2 presses, one with the fan running and one with it already off |
+| Light on/off | 2 presses, one in each light state |
+| Fan speed up | the whole ladder: from the minimum, one press per step to the top |
+| Fan speed down | one press at the bottom, to catch the minimum step |
+| Fan direction | 3 presses, so the third can be checked against the first |
+| Timer | 4 or 5 presses in a row, enough to go round the cycle and close it |
+| Brightness up | 2 presses, at opposite ends of the range |
+| Brightness down | 2 presses, at opposite ends of the range |
 
-**Pass B is the part that cannot be skipped**, and it is not simply insurance against a bad
-recording. Two questions can only be answered by pressing the same button twice:
+**Pressing each control more than once is the part that cannot be skipped**, and not merely as
+insurance against a bad recording. Three questions can only be answered by repeating a press:
 
-- **Is the code fixed, or does it roll?** A fixed-code remote sends the same frame every time, so
-  Homey can replay it. A rolling-code remote changes the frame on every press, and cannot be cloned
-  by replay at all — which would end this approach and is much better known now than after an app
-  is written. If pass B differs from pass A for every button, that is the first thing to suspect.
-- **Do the toggles depend on state?** `Fan On/Off` and `Light On/Off` are single buttons, so they
-  are probably one code that the fan interprets against what it is currently doing. Record pass A
-  with the fan running and pass B with it stopped (or the reverse), and the two readings settle it.
-  If they agree, the button sends one code and Homey cannot know the fan's state from the air alone
-  — which decides how the app models on/off, so it is worth getting now.
+- **Is the code fixed, or does it roll?** A fixed-code handset sends the same frame every time, so
+  Homey can replay it. A rolling-code one changes the frame on every press and cannot be cloned by
+  replay at all — which would end this approach, and is much better known now than after an app is
+  written.
+- **Is the control stateless, or does it carry a value?** This handset's power and light buttons
+  send one fixed code. Its speed, direction and timer buttons do not: the handset tracks the state
+  and transmits the one it is moving to, so every position needs its own recording. The giveaway was
+  speed *up* on one press sending exactly what speed *down* had sent on another — a relative
+  command can never equal its own opposite. The test is a third press: a dirty capture gives a third
+  answer, while a value returns to an earlier one when the state does.
+- **Or is it relative after all?** The brightness buttons send one code for brighter and one for
+  dimmer whatever the level, because the fitting tracks the light and the handset does not. Two
+  recordings at each end of the range settle it: identical codes mean relative, different codes mean
+  a ladder.
 
-Do the two passes a few minutes apart rather than back to back, so a rolling code has reason to
-have moved on.
+One recording may hold several presses — the recorder keeps running — and that is useful rather
+than a problem. `npm run analyse` lists readings **in the order they were sent**, so a button that
+cycles shows its cycle, and a cycle closing is visible as the first and last reading agreeing. That
+is how the timer's four states were mapped.
+
+Leave a little time between repeats of the same button rather than pressing back to back, so a
+rolling code has reason to have moved on.
 
 ## 2. Save
 
@@ -60,7 +65,7 @@ ignored, so notes are fine.
 
 ```
 # Lucci handset, kitchen fan. Recorded 2026-10-19.
-# Pass A with the fan running, pass B stopped.
+# Fan running and light on unless a block says otherwise.
 
 Fan On/Off:
 4770,1538,332,752,690,392,...,65535
@@ -93,7 +98,7 @@ times, so the repeats are a free cross-check — the only one available without 
 | What the report says | What it means |
 |---|---|
 | one reading per button, seen several times | clean; this is what to aim for |
-| two readings per button, each seen several times | normal for some handsets — Bear's sends each command plain, then complemented. Both are real and both matter on receive |
+| several readings, each seen several times | usually one recording holding several presses — check the order sent, printed below the readings. On some handsets it is instead one press sending two forms, as Bear's does (plain, then complemented), and both matter on receive |
 | a reading seen once, marked uncorroborated | a glitched frame. Ignored, and harmless, unless it is all you have |
 | `no clean frames` for a button | record it again, closer to the Homey |
 | `No consistent frame structure found` | too short, too noisy, or not fixed-code. Record two or three buttons again before concluding anything |
@@ -105,14 +110,14 @@ gives two that agree and one that does not.
 
 ## 5. Write it up
 
-Once the readings are clean and agree, the output becomes two things, following the pattern of the
-sibling apps:
+For this handset that is done: [`RF_PROTOCOL.md`](RF_PROTOCOL.md) has the frame layout, the sixteen
+command codes and what each control does, and
+[`.homeycompose/signals/433/lucci.json`](.homeycompose/signals/433/lucci.json) is the signal
+definition the analyser produced.
 
-1. `.homeycompose/signals/433/lucci.json` — the signal definition, as printed.
-2. `RF_PROTOCOL.md` — what the frame means: which positions are the address, which carry the
-   command, what each button's code is, and what the captures cannot settle.
-
-Then the app itself, which is phase 2.
+Re-recording is still worth doing if a fan does not respond, or to settle something the caveats in
+`RF_PROTOCOL.md` leave open — most of which need a **second handset** rather than more recordings
+from this one.
 
 ## What one handset cannot tell you
 
