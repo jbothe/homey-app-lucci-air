@@ -41,21 +41,61 @@ button is pressed. Setting `lucci_speed` therefore implies `onoff` true.
 | Capability | Type | Why |
 |---|---|---|
 | `onoff` | standard | one stateless toggle code |
-| *(no `dim`)* | — | brightness is **relative** — see below |
+| `lucci_brighter` | boolean, `uiComponent: "button"` | one tap, one step — always correct |
+| `lucci_dimmer` | boolean, `uiComponent: "button"` | likewise |
+| `dim` | standard slider | only with tracked position — see below |
 
-**There is deliberately no `dim` capability.** The light's level is tracked by the fitting, not the
-handset: brighter and dimmer are one code each at any level, which four captures at the two ends of
-a twenty-step range established. A `dim` capability would have to count its own steps from an
-unknown starting point and would be wrong the first time anyone touched the handset or the wall
-switch. Offering it would be a worse lie than not offering it.
+Brightness is **relative**: one code for brighter, one for dimmer, at any level, because the fitting
+holds the level and the handset does not. Four captures at the two ends of a range of about twenty
+steps established it.
 
-Brightness gets **flow actions** instead — "Brighten", "Dim", and a step-count variant that sends
-the code `n` times — which is all the protocol can honestly support.
+**Two buttons are the honest core.** A tap sends one press, the light moves one step, and nothing
+has to be remembered. They are correct however the light got to where it is, which no slider can
+claim. Flow actions alone would be poor UX for something people adjust by hand, so these are
+capabilities, on the tile.
 
-**`onoff` on the light is best-effort, and must be implemented as a toggle.** The code is a toggle,
-not discrete on and off, so the app sends it only when its own state differs from the target. That
-is correct whenever Homey's state is right and inverted whenever it is not, which is why receiving
-matters.
+### The slider, and why it is possible after all
+
+A hold was recorded: **holding the handset's dimmer sends the same code repeatedly at the same
+9.4ms cadence as a single press** — 59 frames over 2.76s against a press's 9 — with no
+hold-specific code. So the app can emulate a hold faithfully by transmitting the same payload with
+more repetitions, which is far quicker than sending discrete presses.
+
+That makes a real `dim` slider workable, on three conditions:
+
+1. **The app tracks position itself**, 0 to N. A move to `k` transmits the appropriate code with
+   roughly `|k - position| x framesPerStep` repetitions, then stores `k`.
+2. **Receiving keeps it honest.** Every handset press and hold is overheard, so the estimate can be
+   corrected as the household uses the remote rather than drifting silently. A burst of frames is
+   one press; a longer run is a hold, and its duration converts to steps at the same rate.
+3. **A calibrate action can always re-anchor it.** Transmitting well past the full range drives the
+   light to an extreme, where it saturates, and position is then known exactly. Offered as a flow
+   action and as a repair step, so a user who thinks the slider has drifted can fix it in one tap.
+
+Unlike the RC300 lesson — where transmitting longer than the real remote made the receiver register
+one command as two presses — a long transmission here *is* what the handset does on a hold, so
+extended repetition is correct for brightness specifically. It is not licence to raise
+`repetitions` for any other command.
+
+The slider is marked best-effort in the app's own documentation. The two buttons are not, and remain
+the thing to reach for when it matters.
+
+### Two numbers this still needs
+
+Both come from the hardware, and nothing in 34 recordings can supply them:
+
+- **N**, the number of steps from maximum to minimum, counted by single presses.
+- **T**, the seconds a continuous hold takes to traverse maximum to minimum.
+
+Then `framesPerStep = (T x 21.4) / N`, and the slider is fully specified. Until they are measured
+the app ships the two buttons and no slider, which is a complete and honest device on its own.
+
+### Dim does nothing while the light is off
+
+Confirmed on the hardware: the brightness codes are ignored unless the light is already on. So
+setting `dim` on a device that is off must turn the light on first and then adjust, and `dim` can
+never be the thing that turns the light on. The buttons behave the same way, and should be no-ops
+rather than silent failures when `onoff` is false.
 
 ## Receiving is worth the effort here
 
@@ -69,7 +109,7 @@ and the timer are absolute, a received frame gives the **exact** state rather th
 | a direction code | set `lucci_direction` |
 | a timer code | set `lucci_timer` |
 | light toggle | flip the light's `onoff` |
-| brighter / dimmer | nothing to update — there is no state to track |
+| brighter / dimmer | advance the tracked `dim` position by one step, or by a hold's worth |
 
 That is what keeps Homey honest when the household uses the handset, and it is the main reason the
 light's optimistic `onoff` is tolerable.
@@ -123,7 +163,8 @@ against itself.
    per-position rather than uniform.
 4. **Direction and timer** on the fan.
 5. **Receiving**, and state mirroring from the handset.
-6. **Light driver**: `onoff` plus the brightness actions.
+6. **Light driver**: `onoff` plus the two brightness buttons. The `dim` slider follows once N and
+   T are measured; the device is complete and honest without it.
 7. **Flow cards**, store assets, README and locales.
 
 Steps 1 and 2 can proceed now. Step 3 is where the protocol stops being a hypothesis.
@@ -136,6 +177,8 @@ Worth stating in the app's own documentation rather than discovering in a suppor
   and the app cannot know when the fan's timer expires.
 - **The light's on/off can invert** if its state is changed by something Homey cannot hear — a wall
   switch, a power cut, a second handset. The next toggle then does the opposite of what was asked.
+- **The `dim` slider's position is an estimate**, corrected by what the app overhears and re-anchored
+  by calibrating. The two brightness buttons are exact and need no estimate at all.
 - **Speed, direction and timer survive this**, because every handset press is absolute and received.
 - **Nothing is reported by the fan.** The radio is one-way; everything Homey shows is what it
   commanded or overheard.
