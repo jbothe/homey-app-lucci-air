@@ -26,7 +26,7 @@ test('the table holds all sixteen commands, and no two share a code', () => {
     assert.equal(COMMAND_KEYS.length, 16);
     assert.equal(new Set(COMMAND_KEYS).size, 16, 'keys are unique');
 
-    const tails = COMMAND_KEYS.map(key => buildFrame(HANDSET, key)
+    const tails = COMMAND_KEYS.map(key => buildFrame(HANDSET, key, 0)
         .slice(ADDRESS_LENGTH, HEAD_LENGTH).join(''));
     assert.equal(new Set(tails).size, 16, 'selector and command together are unique');
 });
@@ -40,33 +40,43 @@ test('the capability values come from the table', () => {
 });
 
 test('a frame is the address, then the 9-bit tail', () => {
-    const frame = buildFrame(HANDSET, 'fan.speed.3');
+    const frame = buildFrame(HANDSET, 'fan.speed.3', 0);
 
     assert.equal(frame.length, FRAME_LENGTH);
     assert.deepEqual(frame.slice(0, ADDRESS_LENGTH), HANDSET);
     assert.equal(frame.slice(ADDRESS_LENGTH).join(''), '100010110');
 });
 
-test('bit 24 is computed, so an odd-weight address sets it', () => {
-    // The whole reason the bit is computed rather than copied. On this handset
-    // every command comes out with it clear — bit-for-bit what was recorded —
-    // and on a handset whose address has odd weight every command needs it set.
-    // 33 recordings cannot separate even parity from a constant zero; this is
-    // the behaviour that would differ if the choice were wrong.
-    for (const key of COMMAND_KEYS) {
-        assert.equal(buildFrame(HANDSET, key)[HEAD_LENGTH], 0, `${key} from an even address`);
-        assert.equal(buildFrame(ODD, key)[HEAD_LENGTH], 1, `${key} from an odd address`);
+test('bit 24 is carried, never computed', () => {
+    // It was computed, as even parity over bits 0-23, and the radio disproved
+    // that: frames arrived with even weight across those bits and bit 24 set.
+    // So there is no rule left to apply and nothing to fall back on — a frame
+    // built without the bit would be a guess on the air.
+    for (const bad of [undefined, null, 2, -1, '1', true, [1]]) {
+        assert.throws(() => buildFrame(HANDSET, 'fan.off', bad), /Bad bit 24/);
     }
 
-    assert.equal(evenParity([]), 0);
-    assert.equal(evenParity([1, 1, 0]), 0);
-    assert.equal(evenParity([1, 1, 1]), 1);
+    // Both values go out as asked, on an address whose even weight means parity
+    // would have insisted on 0 either way.
+    for (const key of COMMAND_KEYS) {
+        for (const address of [HANDSET, ODD]) {
+            assert.equal(buildFrame(address, key, 0)[HEAD_LENGTH], 0, `${key} 0`);
+            assert.equal(buildFrame(address, key, 1)[HEAD_LENGTH], 1, `${key} 1`);
+        }
+    }
+
+    // The property that let the parity rule stand as long as it did: every one
+    // of the sixteen commands has an even number of ones across bits 0-23 when
+    // sent from this handset, so parity predicted 0 and 0 is what was recorded.
+    for (const key of COMMAND_KEYS) {
+        assert.equal(evenParity(buildFrame(HANDSET, key, 0).slice(0, HEAD_LENGTH)), 0, key);
+    }
 });
 
 test('every built frame identifies back to the command that built it', () => {
     for (const key of COMMAND_KEYS) {
         for (const address of [HANDSET, ODD]) {
-            const frame = buildFrame(address, key);
+            const frame = buildFrame(address, key, 0);
             const found = identifyFrame(frame);
 
             assert.notEqual(found, null, `${key} did not identify`);
@@ -78,16 +88,16 @@ test('every built frame identifies back to the command that built it', () => {
 });
 
 test('identifyFrame names the field as well as the command', () => {
-    const light = identifyFrame(buildFrame(HANDSET, 'light.dimmer'));
+    const light = identifyFrame(buildFrame(HANDSET, 'light.dimmer', 0));
     assert.deepEqual(light, {
         address: HANDSET, domain: 'light', command: 'dimmer', value: null, key: 'light.dimmer',
-        parityOk: true, restored: false, addressSure: true, bit24: 0,
+        restored: false, addressSure: true, bit24: 0,
     });
 
-    const speed = identifyFrame(buildFrame(HANDSET, 'fan.speed.4'));
+    const speed = identifyFrame(buildFrame(HANDSET, 'fan.speed.4', 0));
     assert.deepEqual(speed, {
         address: HANDSET, domain: 'fan', command: 'speed', value: '4', key: 'fan.speed.4',
-        parityOk: true, restored: false, addressSure: true, bit24: 0,
+        restored: false, addressSure: true, bit24: 0,
     });
 });
 
@@ -114,17 +124,16 @@ test('the frame the radio actually delivered reads as the button that was presse
     // The restored frame is bit-for-bit the frame the app would transmit for
     // that button — which is the strongest statement available that the leading
     // bit was recovered correctly rather than merely plausibly.
-    // The restored frame happens to come out bit-for-bit right, because this
-    // transmitter's bit 24 is 0 and the guess below therefore lands. That is a
-    // coincidence of this handset, not a rule — see the parity test below.
-    assert.deepEqual(completeFrame(FROM_THE_RADIO).frame, buildFrame(HANDSET, 'fan.off'));
-    assert.match(describeFrame(FROM_THE_RADIO), /^fan\.off \(24 symbols, one restored\)/);
-
-    // **But address bit 0 was guessed, not heard**, so the frame cannot say
-    // whose it is. Every caller that decides identity has to refuse it.
+    // The command field arrived in full, so the frame is worth naming in a log.
+    // **Address bit 0 did not**, so the frame cannot say whose it is, and every
+    // caller that decides identity refuses it. Bit 24 did arrive — it is the
+    // last symbol — which is the opposite way round from the other truncation.
     assert.equal(found.restored, true);
     assert.equal(found.addressSure, false);
-    assert.equal(identifyFrame(buildFrame(HANDSET, 'fan.off')).addressSure, true);
+    assert.equal(found.bit24, 0, 'bit 24 survives a leading truncation');
+    assert.match(describeFrame(FROM_THE_RADIO), /missing its leading address bit/);
+
+    assert.equal(identifyFrame(buildFrame(HANDSET, 'fan.off', 0)).addressSure, true);
 });
 
 test('a leading bit lost names the command but cannot vouch for the address', () => {
@@ -133,7 +142,7 @@ test('a leading bit lost names the command but cannot vouch for the address', ()
     // recover it exactly — is not parity, so what comes out is a guess.
     for (const key of COMMAND_KEYS) {
         for (const address of [HANDSET, ODD]) {
-            const found = identifyFrame(buildFrame(address, key).slice(1));
+            const found = identifyFrame(buildFrame(address, key, 0).slice(1));
 
             assert.notEqual(found, null, `${key} did not identify with its leading bit lost`);
             assert.equal(found.key, key);
@@ -142,36 +151,18 @@ test('a leading bit lost names the command but cannot vouch for the address', ()
     }
 });
 
-test('a trailing bit lost vouches for the address, having heard all of it', () => {
-    // The difference that matters between the two truncations: here only bit 24
-    // is missing, and the app uses nothing it carries, so the address arrived
-    // whole and the frame identifies as firmly as a full-length one.
+test('a trailing bit lost vouches for the address but not for bit 24', () => {
+    // The two truncations lose opposite ends. Here the address arrived whole, so
+    // the frame can say whose it is — and bit 24 is precisely what went missing,
+    // so it cannot be transmitted back.
     for (const key of COMMAND_KEYS) {
-        const whole = buildFrame(HANDSET, key);
-        const found = identifyFrame(whole.slice(0, RX_FRAME_LENGTH));
+        const found = identifyFrame(buildFrame(HANDSET, key, 1).slice(0, RX_FRAME_LENGTH));
 
         assert.equal(found.addressSure, true, key);
         assert.deepEqual(found.address, HANDSET, key);
+        assert.equal(found.bit24, null, `${key} invented a bit 24`);
+        assert.match(describeFrame(buildFrame(HANDSET, key, 1).slice(0, RX_FRAME_LENGTH)), /missing bit 24/);
     }
-});
-
-test('bit 24 is not parity, and the app no longer pretends otherwise', () => {
-    // Settled on the radio, against the hypothesis. Frames arrived in thousands
-    // with an even number of ones across bits 0-23 and bit 24 set — which even
-    // parity forbids, and which the constant zero of all 33 recordings forbids
-    // too. identifyFrame reports the disagreement and acts on the frame anyway,
-    // which is the decision that kept the app working through the discovery.
-    const whole = buildFrame(HANDSET, 'fan.speed.5');
-    const asHeard = [...whole.slice(0, HEAD_LENGTH), 1];
-
-    assert.equal(evenParity(asHeard.slice(0, HEAD_LENGTH)), 0, 'bits 0-23 are even');
-    assert.equal(asHeard[HEAD_LENGTH], 1, 'and bit 24 is set anyway');
-
-    const found = identifyFrame(asHeard);
-    assert.notEqual(found, null, 'a frame was rejected for a bit the app cannot explain');
-    assert.equal(found.key, 'fan.speed.5');
-    assert.equal(found.parityOk, false);
-    assert.equal(found.addressSure, true, 'nothing about this address was guessed');
 });
 
 test('a trailing bit lost is recovered too, as the sibling handset needs', () => {
@@ -180,35 +171,32 @@ test('a trailing bit lost is recovered too, as the sibling handset needs', () =>
     // and requiring the full length there made that app completely deaf while
     // looking like a radio fault.
     for (const key of COMMAND_KEYS) {
-        const whole = buildFrame(ODD, key);
+        const whole = buildFrame(ODD, key, 0);
         const short = whole.slice(0, RX_FRAME_LENGTH);
 
         const found = identifyFrame(short);
         assert.notEqual(found, null, `${key} did not identify with its trailing bit lost`);
         assert.equal(found.key, key);
-        assert.deepEqual(buildFrame(found.address, found.key), whole);
+        assert.deepEqual(buildFrame(found.address, found.key, 0), whole);
     }
 });
 
-test('a frame whose parity is wrong is reported, not rejected', () => {
-    // Rejecting it would make a handset whose address has odd weight impossible
-    // to pair — and that is exactly the handset on which even parity and a
-    // constant zero differ, so it is the one case where the unresolved bit
-    // matters. A frame like this is evidence that bit 24 is a constant zero, and
-    // the driver logs it; it is not evidence that the frame belongs to someone
-    // else, which is what the length, selector and tail are for.
-    const frame = buildFrame(ODD, 'fan.off');
-    const flipped = [...frame.slice(0, HEAD_LENGTH), frame[HEAD_LENGTH] ^ 1];
+test('a frame is accepted whatever bit 24 says, and bit 24 is reported', () => {
+    // The decision that kept the app working through the discovery. Bit 24 was
+    // never enforced on receive — it adds one bit of discrimination over the
+    // length, the selector and the command tail — so frames that disagreed with
+    // the parity rule were acted on, and their disagreement was what disproved
+    // the rule rather than being mistaken for someone else's traffic.
+    const head = buildFrame(HANDSET, 'fan.speed.5', 0).slice(0, HEAD_LENGTH);
+    assert.equal(evenParity(head), 0, 'bits 0-23 are even, as all sixteen commands are');
 
-    const found = identifyFrame(flipped);
-    assert.notEqual(found, null);
-    assert.equal(found.key, 'fan.off');
-    assert.equal(found.parityOk, false);
-    assert.match(describeFrame(flipped), /parity 0 where 1 was expected/);
-
-    // And a frame that does agree says so, while a short one cannot.
-    assert.equal(identifyFrame(frame).parityOk, true);
-    assert.equal(identifyFrame(frame.slice(0, RX_FRAME_LENGTH)).parityOk, null);
+    for (const bit of [0, 1]) {
+        const found = identifyFrame([...head, bit]);
+        assert.notEqual(found, null, `bit 24 = ${bit} was rejected`);
+        assert.equal(found.key, 'fan.speed.5');
+        assert.equal(found.bit24, bit, 'the bit was not reported as it arrived');
+        assert.equal(found.addressSure, true);
+    }
 });
 
 test('an unrelated 433 MHz frame is not mistaken for the handset', () => {
@@ -219,7 +207,7 @@ test('an unrelated 433 MHz frame is not mistaken for the handset', () => {
         const head = [...HANDSET, ...selector, ...command];
         return [...head, evenParity(head)];
     };
-    const wrongLength = buildFrame(HANDSET, 'fan.off').slice(0, 20);
+    const wrongLength = buildFrame(HANDSET, 'fan.off', 0).slice(0, 20);
 
     for (const payload of [null, undefined, 'fan.off', [], wrongLength]) {
         assert.equal(identifyFrame(payload), null);
@@ -267,8 +255,8 @@ test('a 24-symbol frame is read by shifting, which discriminates less', () => {
 test('buildFrame refuses what it cannot build rather than sending nonsense', () => {
     // An unknown key or a missing address would otherwise spread `undefined`
     // into the payload and fail deep inside tx() with nothing to point at.
-    assert.throws(() => buildFrame(HANDSET, 'fan.speed.6'), /Unknown command: fan\.speed\.6/);
-    assert.throws(() => buildFrame(HANDSET, 'fan.on'), /Unknown command: fan\.on/);
+    assert.throws(() => buildFrame(HANDSET, 'fan.speed.6', 0), /Unknown command: fan\.speed\.6/);
+    assert.throws(() => buildFrame(HANDSET, 'fan.on', 0), /Unknown command: fan\.on/);
     assert.throws(() => buildFrame(HANDSET, undefined), /Unknown command/);
     assert.throws(() => buildFrame(HANDSET.slice(1), 'fan.off'), /Bad address/);
     assert.throws(() => buildFrame(null, 'fan.off'), /Bad address/);
@@ -281,39 +269,6 @@ test('sameAddress tells one household\'s handset from another\'s', () => {
     assert.equal(sameAddress(HANDSET, HANDSET.slice(1)), false);
     assert.equal(sameAddress(HANDSET, null), false);
     assert.equal(sameAddress(undefined, undefined), false);
-});
-
-test('buildFrame sends the bit 24 it was given, not one it worked out', () => {
-    // The change the radio forced. Both values go out as asked, on an address
-    // whose even weight means even parity would have insisted on 0 either way.
-    for (const key of COMMAND_KEYS) {
-        assert.equal(buildFrame(HANDSET, key, 0)[HEAD_LENGTH], 0, key);
-        assert.equal(buildFrame(HANDSET, key, 1)[HEAD_LENGTH], 1, key);
-    }
-
-    // And the frame is otherwise untouched, so a learned bit cannot disturb the
-    // address or the command.
-    const asked = buildFrame(HANDSET, 'fan.speed.3', 1);
-    const computed = buildFrame(HANDSET, 'fan.speed.3');
-    assert.deepEqual(asked.slice(0, HEAD_LENGTH), computed.slice(0, HEAD_LENGTH));
-});
-
-test('without a bit 24 it transmits exactly what it always has', () => {
-    // Bug compatibility on purpose. A device paired before the app knew about
-    // this field has nothing stored, and quietly changing what goes on air
-    // underneath it would be worse than the limitation it lives with.
-    for (const key of COMMAND_KEYS) {
-        const fallback = buildFrame(HANDSET, key);
-        assert.deepEqual(buildFrame(HANDSET, key, null), fallback, key);
-        assert.deepEqual(buildFrame(HANDSET, key, undefined), fallback, key);
-        assert.equal(fallback[HEAD_LENGTH], evenParity(fallback.slice(0, HEAD_LENGTH)));
-    }
-});
-
-test('a bit 24 that is not a bit is refused rather than coerced', () => {
-    for (const bad of [2, -1, '1', true, [1]]) {
-        assert.throws(() => buildFrame(HANDSET, 'fan.off', bad), /Bad bit 24/);
-    }
 });
 
 test('what the radio sends round-trips through identify and build', () => {

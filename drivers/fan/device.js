@@ -51,14 +51,19 @@ class LucciFanDevice extends Homey.Device {
         }
         // Bit 24 as this handset was heard to send it, learned at pair time
         // because it cannot be computed: it is neither parity nor a constant.
-        // Null on a device paired before the app knew that, where buildFrame
-        // falls back to what it has always transmitted. See RF_PROTOCOL.md.
-        const bit24 = this.getStoreValue('bit24');
-        this.bit24 = bit24 === 0 || bit24 === 1 ? bit24 : null;
+        // Without it there is nothing to transmit — a guess on the air would
+        // look like a working device driving nothing — so the device waits to be
+        // added again, exactly as it does without an address. See RF_PROTOCOL.md.
+        this.bit24 = this.getStoreValue('bit24');
         this.bit24Mismatches = 0;
+        if (this.bit24 !== 0 && this.bit24 !== 1) {
+            this.error('no bit 24 stored; the device must be added again');
+            await this.setUnavailable(this.homey.__('errors.not_paired'));
+            return;
+        }
 
         this.log(`initialised; address ${this.address.join('')},`
-            + ` bit 24 ${this.bit24 === null ? 'unknown — falling back to even parity' : this.bit24}`);
+            + ` bit 24 ${this.bit24}`);
 
         // So the tile always offers a speed, and `onoff` always has one to send.
         // Which of the two happened is logged, because `onoff` true sends this
@@ -266,7 +271,7 @@ class LucciFanDevice extends Homey.Device {
     // constant never will. Said once per device, because thousands of frames is
     // not thousands of findings.
     noteBit24(frame) {
-        if (frame.bit24 === null || this.bit24 === null) return;
+        if (frame.bit24 === null) return;
         if (frame.bit24 === this.bit24) return;
 
         this.bit24Mismatches += 1;

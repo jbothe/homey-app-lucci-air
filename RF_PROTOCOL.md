@@ -199,30 +199,33 @@ protocol and not for driving a fan.
 
 ### What the app does about it
 
-- **Transmitting sends the bit the handset was heard to send.** It is learned at pair time alongside
-  the address and stored with it, because the only sound source for a bit that follows no rule is the
-  transmitter that produced it. A device paired before this field existed has nothing stored and
-  falls back to even parity — which is not a guess at the rule but bug compatibility: it is exactly
-  what the app used to transmit, it reproduces all 33 recordings, and the fan it is paired with
-  answers to it. Changing what goes on air underneath a working device would be worse than the
-  limitation.
+- **Transmitting sends the bit the handset was heard to send, and nothing else.** It is learned at
+  pair time alongside the address and stored with it, because the only sound source for a bit that
+  follows no rule is the transmitter that produced it. There is **no fallback**: `buildFrame` refuses
+  a frame without it, and a device with none stored makes itself unavailable with the same remedy as
+  a missing address. A guessed bit on the air would look like a working device driving nothing, which
+  is the worse failure.
+- **Pairing therefore needs a complete frame.** The two truncations this receiver produces lose
+  opposite ends — the leading one drops address bit 0, the trailing one drops bit 24 — and neither is
+  recoverable, so neither is enough to pair on. The full-length frame arrives inside the same press.
 - **A learn step sees one press, so it learns one sample of the bit.** Whether a handset holds it
   constant across its sixteen commands is checked at runtime instead, where there are thousands of
   frames to check against: a received frame whose bit 24 disagrees with what the device stores is
   logged once, and that line is what would show the bit varies by command rather than by handset.
   Nothing has disagreed yet.
-- **Receiving reports the disagreement and acts on the frame anyway.** That decision was made before
-  any of this was known, on the grounds that parity adds a single bit of discrimination over the
-  length, the selector and the command tail, and that enforcing it could make a handset unpairable.
-  It is why the app kept working through the discovery instead of going deaf on an unexplained bit.
+- **Receiving never enforced the bit, which is why the app kept working through the discovery.** The
+  decision was made before any of this was known, on the grounds that the bit adds a single bit of
+  discrimination over the length, the selector and the command tail. Frames that disagreed with the
+  parity rule were acted on rather than mistaken for someone else's traffic, and their disagreement
+  is what disproved the rule.
 - **A dropped leading bit is no longer recoverable.** It used to be, exactly: `R = F[1..24]`, so
   `F[0] = R[23] XOR (R[0] ... R[22])` restored address bit 0 from the parity bit. With parity gone
   that is a coin toss on one address bit, so such a frame is marked `addressSure: false` and every
   caller that decides whose frame it is refuses it — pairing, and both devices' receive paths. The
   command is still named in the log, which costs nothing and is occasionally useful.
-- **The log that found it is throttled now**, with the payload and the address attached. The first
-  version carried neither, which is precisely what made "second handset" and "broken rule"
-  indistinguishable for a day.
+- **The log that found it is gone**, having done its job: it compared every frame against a rule now
+  known to be false. What replaced it is narrower and says more — each device compares an arriving
+  bit 24 against the one it learned, which is a question still open rather than one already answered.
 
 ## Receiving
 

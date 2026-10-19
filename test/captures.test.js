@@ -111,10 +111,11 @@ test('every recorded frame is one the command table knows', { skip }, () => {
             assert.notEqual(found, null,
                 `${capture.label}: ${frame.join('')} — ${describeFrame(frame)}`);
 
-            // Bit 24 as recorded agrees with even parity on every frame of this
-            // handset — which is why computing it costs nothing here, and why 33
-            // recordings cannot tell parity from a constant zero.
-            assert.equal(found.parityOk, true, `${capture.label}: ${describeFrame(frame)}`);
+            // Bit 24 as this handset actually sent it. It is 0 throughout, and
+            // bits 0-23 are of even weight throughout, which is exactly why 33
+            // recordings could not tell even parity from a constant zero — and
+            // why the radio had to be the thing that disproved both.
+            assert.equal(found.bit24, 0, `${capture.label}: ${describeFrame(frame)}`);
         }
     }
 });
@@ -139,7 +140,7 @@ test('buildFrame reproduces the frames the handset actually sent', { skip }, () 
             // existed still transmits. Identical here, because this handset's
             // bit 24 is 0 and its frames are of even weight — the coincidence
             // that let the parity rule stand for as long as it did.
-            assert.deepEqual(buildFrame(address, key), frame, `${capture.label}: ${key} (fallback)`);
+            assert.deepEqual(buildFrame(address, key, 0), frame, `${capture.label}: ${key} (fallback)`);
         }
     }
 
@@ -208,8 +209,8 @@ test('the light and the fan are told apart only by the selector', { skip }, () =
     assert.equal(dim.key, 'light.dimmer');
     assert.equal(speed.key, 'fan.speed.3');
     assert.deepEqual(
-        buildFrame(dim.address, dim.key).slice(ADDRESS_LENGTH + 2),
-        buildFrame(speed.address, speed.key).slice(ADDRESS_LENGTH + 2),
+        buildFrame(dim.address, dim.key, dim.bit24).slice(ADDRESS_LENGTH + 2),
+        buildFrame(speed.address, speed.key, speed.bit24).slice(ADDRESS_LENGTH + 2),
         'the two share everything below the selector',
     );
 });

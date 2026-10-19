@@ -62,9 +62,10 @@ checked against the sibling Bear handset's recordings, where the answer is alrea
 recovers that protocol's preamble, alphabet, frame length, repeat count, interval and tolerance
 without being given any of them.
 
-One bit of the frame follows no rule at all: bit 24 was consistent with even parity across all 33
-recordings and the radio later disproved it, so the app learns that bit from your own handset at pair
-time rather than deriving it. What it means is still unknown — see "Bit 24" in
+One bit of the frame follows no rule at all. Bit 24 was consistent with even parity across all 33
+recordings, and the radio later disproved it, so the app learns that bit from your own handset at
+pair time rather than deriving it — and refuses to transmit without it, since a guess there looks
+like a working device driving nothing. What the bit *means* is still unknown; see "Bit 24" in
 [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
 
 In short, what the handset turned out to be: a 19-duration preamble, 25 bits, a 16-bit address and a

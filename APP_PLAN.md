@@ -168,8 +168,11 @@ decoding".
 disproved that: frames arrived with an even number of ones across bits 0-23 and bit 24 set, which
 neither parity nor the constant zero of all 33 recordings permits — see "Bit 24" in RF_PROTOCOL.md.
 So pairing keeps the bit alongside the address and the devices transmit what they were given, which
-is right whatever the bit turns out to mean. A device paired before the field existed falls back to
-even parity, which is what it has always transmitted and what its fan answers to.
+is right whatever the bit turns out to mean. There is no fallback: `buildFrame` refuses a frame
+without the bit, and a device with none stored makes itself unavailable rather than guess, because a
+guessed bit looks like a working device driving nothing. Pairing needs a complete frame for the same
+reason — the two truncations lose opposite ends, address bit 0 and bit 24, and neither is
+recoverable.
 
 `identifyFrame(payload)` accepts 24 or 25 symbols, checks the selector is `10` or `01`, looks the
 command tail up in the table, and returns `{ address, domain, command, value }` or null. That

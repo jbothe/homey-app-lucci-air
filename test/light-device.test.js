@@ -64,10 +64,10 @@ const LucciLightDevice = require('../drivers/light/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
-async function light({ on = true, at, bit24 } = {}) {
+async function light({ on = true, at, bit24 = 0 } = {}) {
     const device = new LucciLightDevice();
     device.storeValues.address = ADDRESS;
-    if (bit24 !== undefined) device.storeValues.bit24 = bit24;
+    if (bit24 !== null) device.storeValues.bit24 = bit24;
     if (at !== undefined) device.storeValues.position = at;
     device.capabilityValues.onoff = on;
     await device.onInit();
@@ -85,7 +85,7 @@ async function request(device, capability, value) {
 }
 
 async function receive(device, key, isFirst = true) {
-    for (const listener of device.rxListeners) listener(identifyFrame(buildFrame(ADDRESS, key)), isFirst);
+    for (const listener of device.rxListeners) listener(identifyFrame(buildFrame(ADDRESS, key, 0)), isFirst);
     await new Promise(resolve => setTimeout(resolve, 1));
 }
 
@@ -322,8 +322,8 @@ test('the light ignores the fan, and other households', async () => {
     const device = await light({ on: true, at: 10 });
 
     for (const listener of device.rxListeners) {
-        listener(identifyFrame(buildFrame(ADDRESS, 'fan.speed.3')), true);
-        listener(identifyFrame(buildFrame(ADDRESS.map((b, i) => (i ? b : b ^ 1)), 'light.onoff')), true);
+        listener(identifyFrame(buildFrame(ADDRESS, 'fan.speed.3', 0)), true);
+        listener(identifyFrame(buildFrame(ADDRESS.map((b, i) => (i ? b : b ^ 1)), 'light.onoff', 0)), true);
     }
     await new Promise(resolve => setTimeout(resolve, 1));
 
@@ -358,12 +358,11 @@ test('the light transmits the bit 24 it was paired with', async () => {
     assert.ok(device.logs.some(line => line.includes('bit 24 1')), device.logs.join(' | '));
 });
 
-test('a light paired before bit 24 was understood falls back', async () => {
-    const device = await light({ at: 10 });
-    await request(device, 'lucci_dimmer', true);
+test('a light with no stored bit 24 refuses to transmit', async () => {
+    const device = await light({ at: 10, bit24: null });
 
-    assert.equal(device.bit24, null);
-    assert.equal(device.sent[0][24], 0);
+    assert.equal(device.unavailable, 'errors.not_paired');
+    assert.deepEqual(Object.keys(device.listeners), []);
 });
 
 test('every press of a long move carries the learned bit', async () => {

@@ -67,7 +67,7 @@ test('pairing takes the address off a full-length frame at once', async () => {
     const learning = fan.learnAddress(view);
     await settle();
 
-    air(fan, buildFrame(ADDRESS, 'fan.off'));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
 
     assert.deepEqual((await learning).address, ADDRESS);
     assert.ok(fan.logs.some(line => line.includes('matched fan.off; address 0101110011110011')),
@@ -83,26 +83,26 @@ test('any button pairs, including one belonging to the light', async () => {
         const learning = fan.learnAddress(session());
         await settle();
 
-        air(fan, buildFrame(ADDRESS, key));
+        air(fan, buildFrame(ADDRESS, key, 0));
         assert.deepEqual((await learning).address, ADDRESS, key);
     }
 });
 
-test('a reconstructed frame waits, and loses to the full frame that follows', async () => {
+test('an incomplete frame waits, and loses to the full frame that follows', async () => {
     // The observed hardware: one press arrives as a 24-symbol frame with its
     // leading bit missing, then 70ms later as a full 25-symbol one. That leading
-    // bit is address bit 0, and it is a guess — bit 24 is not parity, so there
-    // is nothing to recover it from. Pairing is the one caller with no stored
-    // address to check against, so it waits for the full one.
+    // bit is address bit 0, and nothing recovers it — it was recoverable only
+    // from bit 24 under a parity rule the radio disproved. Pairing is the one
+    // caller with nothing stored to check against, so it waits for the full one.
     const fan = await driver();
     const learning = fan.learnAddress(session());
     await settle();
 
-    const whole = buildFrame(ADDRESS, 'fan.off');
+    const whole = buildFrame(ADDRESS, 'fan.off', 0);
     air(fan, whole.slice(1));
     await settle();
 
-    assert.ok(fan.logs.some(line => line.includes('missing its leading bit')), fan.logs.join(' | '));
+    assert.ok(fan.logs.some(line => line.includes('on an incomplete frame')), fan.logs.join(' | '));
 
     air(fan, whole);
     assert.deepEqual((await learning).address, ADDRESS);
@@ -115,7 +115,7 @@ test('the full frame is taken even as a later frame of the same burst', async ()
     const learning = fan.learnAddress(session());
     await settle();
 
-    const whole = buildFrame(ADDRESS, 'fan.speed.1');
+    const whole = buildFrame(ADDRESS, 'fan.speed.1', 0);
     air(fan, whole.slice(1), true);
     await settle();
     air(fan, whole, false);
@@ -123,20 +123,24 @@ test('the full frame is taken even as a later frame of the same burst', async ()
     assert.deepEqual((await learning).address, ADDRESS);
 });
 
-test('a frame missing its leading bit never pairs, and the timeout says why', async () => {
+test('an incomplete frame never pairs, and the timeout says why', async () => {
     // The deliberate choice, and the loud failure rather than the quiet one. A
     // receiver that only ever delivered 24 symbols is now unpairable — and says
     // so — where before it would have paired on a coin toss and produced a
-    // device that is added, looks right and never works.
+    // device that is added, looks right and drives nothing.
+    //
+    // Both truncations, because they lose opposite ends and neither is enough:
+    // one drops address bit 0, the other drops bit 24.
     const fan = await driver();
     fan.learnTimeout = 30;
     const learning = fan.learnAddress(session());
     await settle();
 
-    air(fan, buildFrame(ADDRESS, 'fan.off').slice(1));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0).slice(1));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0).slice(0, 24));
 
     await assert.rejects(() => learning, /pair\.timeout_restored/);
-    assert.ok(fan.logs.some(line => line.includes('missing its leading bit')), fan.logs.join(' | '));
+    assert.ok(fan.logs.some(line => line.includes('on an incomplete frame')), fan.logs.join(' | '));
 });
 
 test('a timeout with nothing heard at all says that instead', async () => {
@@ -152,7 +156,7 @@ test('the press count on screen counts presses, not frames', async () => {
     const learning = fan.learnAddress(view);
     await settle();
 
-    const whole = buildFrame(ADDRESS, 'fan.off');
+    const whole = buildFrame(ADDRESS, 'fan.off', 0);
     air(fan, whole.slice(1), true);
     await settle();
     air(fan, whole, false);
@@ -171,7 +175,7 @@ test('a view that cannot be updated does not cost the user the press', async () 
     const learning = fan.learnAddress(broken);
     await settle();
 
-    air(fan, buildFrame(ADDRESS, 'fan.off'));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
 
     assert.deepEqual((await learning).address, ADDRESS);
     assert.ok(fan.logs.some(line => line.includes('could not update the view')), fan.logs.join(' | '));
@@ -193,7 +197,7 @@ test('unrelated 433 MHz traffic neither pairs nor goes unmentioned', async () =>
     assert.ok(fan.logs.some(line => line.includes('rx unrecognised')), fan.logs.join(' | '));
 
     // And pairing is still listening.
-    air(fan, buildFrame(ADDRESS, 'fan.off'));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
     assert.deepEqual((await learning).address, ADDRESS);
 });
 
@@ -202,14 +206,14 @@ test('RX is reference counted, so pairing twice does not strand it', async () =>
 
     const first = fan.learnAddress(session());
     await settle();
-    air(fan, buildFrame(ADDRESS, 'fan.off'));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
     await first;
     assert.equal(fan.rxEnabled, 0);
 
     const second = fan.learnAddress(session());
     await settle();
     assert.equal(fan.rxEnabled, 1, 'RX did not come back for a second attempt');
-    air(fan, buildFrame(ADDRESS, 'fan.speed.0'));
+    air(fan, buildFrame(ADDRESS, 'fan.speed.0', 0));
     await second;
     assert.equal(fan.rxEnabled, 0);
 });
@@ -227,7 +231,7 @@ test('a device offered for pairing is named and keyed by its address', async () 
 
     const learning = handlers.learn();
     await settle();
-    air(fan, buildFrame(ADDRESS, 'fan.off'));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
     await learning;
 
     const [device] = await handlers.list_devices();
@@ -247,7 +251,7 @@ test('pairing learns bit 24 from the handset rather than deriving it', async () 
         const learning = fan.learnAddress(session());
         await settle();
 
-        const whole = buildFrame(ADDRESS, 'fan.off');
+        const whole = buildFrame(ADDRESS, 'fan.off', 0);
         air(fan, [...whole.slice(0, 24), bit]);
 
         const learned = await learning;
@@ -257,18 +261,16 @@ test('pairing learns bit 24 from the handset rather than deriving it', async () 
     }
 });
 
-test('a frame that never carried bit 24 pairs without it', async () => {
-    // The trailing truncation loses bit 24 and nothing else, so the address is
-    // sound and there is simply nothing to learn for that field. The device then
-    // falls back to what the app has always transmitted.
+test('a frame that never carried bit 24 cannot pair either', async () => {
+    // The trailing truncation leaves a sound address and no bit 24. That used to
+    // be pairable, because a missing bit fell back to even parity; with the bit
+    // required there is nothing to fall back on, so it is not.
     const fan = await driver();
+    fan.learnTimeout = 30;
     const learning = fan.learnAddress(session());
     await settle();
 
-    air(fan, buildFrame(ADDRESS, 'fan.off').slice(0, 24));
+    air(fan, buildFrame(ADDRESS, 'fan.off', 1).slice(0, 24));
 
-    const learned = await learning;
-    assert.deepEqual(learned.address, ADDRESS);
-    assert.equal(learned.bit24, null);
-    assert.ok(fan.logs.some(line => line.includes('bit 24 not heard')), fan.logs.join(' | '));
+    await assert.rejects(() => learning, /pair\.timeout_restored/);
 });

@@ -79,10 +79,10 @@ const LucciFanDevice = require('../drivers/fan/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
-async function device({ speed, onoff, bit24 } = {}) {
+async function device({ speed, onoff, bit24 = 0 } = {}) {
     const fan = new LucciFanDevice();
     fan.storeValues.address = ADDRESS;
-    if (bit24 !== undefined) fan.storeValues.bit24 = bit24;
+    if (bit24 !== null) fan.storeValues.bit24 = bit24;
     if (speed !== undefined) fan.capabilityValues.lucci_speed = speed;
     if (onoff !== undefined) fan.capabilityValues.onoff = onoff;
     await fan.onInit();
@@ -320,7 +320,7 @@ test('every direction and timer value has a code that builds', async () => {
 
 // --- following the handset ---------------------------------------------------
 
-const heard = (fan, key) => receive(fan, buildFrame(ADDRESS, key));
+const heard = (fan, key) => receive(fan, buildFrame(ADDRESS, key, 0));
 
 test('the device listens for the handset, and stops when it uninits', async () => {
     const fan = await device({ speed: '2' });
@@ -375,7 +375,7 @@ test('another handset is ignored', async () => {
     const fan = await device({ speed: '2', onoff: false });
     const elsewhere = ADDRESS.map((bit, i) => (i === 0 ? bit ^ 1 : bit));
 
-    await receive(fan, buildFrame(elsewhere, 'fan.speed.5'));
+    await receive(fan, buildFrame(elsewhere, 'fan.speed.5', 0));
 
     assert.equal(fan.capabilityValues.lucci_speed, '2', 'one household drove another\'s fan');
     assert.equal(fan.capabilityValues.onoff, false);
@@ -399,7 +399,7 @@ test('repeats of one press are collapsed, a later press is not', async () => {
 
 test('a frame Homey marks as a repeat is ignored outright', async () => {
     const fan = await device({ speed: '2', onoff: false });
-    await receive(fan, buildFrame(ADDRESS, 'fan.speed.5'), false);
+    await receive(fan, buildFrame(ADDRESS, 'fan.speed.5', 0), false);
 
     assert.equal(fan.capabilityValues.lucci_speed, '2');
 });
@@ -435,21 +435,21 @@ test('the device transmits the bit 24 it was paired with', async () => {
     assert.deepEqual(one.sent[0].slice(0, 24), zero.sent[0].slice(0, 24));
 });
 
-test('a device paired before bit 24 was understood keeps its old behaviour', async () => {
-    // Nothing stored, so buildFrame falls back to what the app has always put on
-    // air and what this handset answers to. Changing that underneath a working
-    // device would be worse than the limitation.
-    const fan = await device({ speed: '2', onoff: false });
-    await request(fan, { lucci_speed: '3' });
+test('a device with no stored bit 24 refuses to transmit', async () => {
+    // The bit cannot be computed, so a device without it has nothing to send.
+    // Unavailable with the same remedy as a missing address — add it again — in
+    // preference to transmitting a guess, which would look like a working
+    // device driving nothing.
+    const fan = await device({ bit24: null });
 
-    assert.equal(fan.bit24, null);
-    assert.equal(fan.sent[0][24], 0, 'the fallback stopped reproducing the recordings');
-    assert.ok(fan.logs.some(line => line.includes('falling back to even parity')), fan.logs.join(' | '));
+    assert.equal(fan.unavailable, 'errors.not_paired');
+    assert.equal(fan.multiListener, null, 'no listener, so nothing can be sent');
+    assert.ok(fan.logs.some(line => line.includes('no bit 24 stored')), fan.logs.join(' | '));
 });
 
-test('a stored bit 24 that is not a bit is treated as unknown', async () => {
-    const fan = await device({ speed: '2', bit24: 'yes' });
-    assert.equal(fan.bit24, null);
+test('a stored bit 24 that is not a bit is no bit 24 at all', async () => {
+    const fan = await device({ bit24: 'yes' });
+    assert.equal(fan.unavailable, 'errors.not_paired');
 });
 
 test('a received frame disagreeing about bit 24 is reported once', async () => {
@@ -458,7 +458,7 @@ test('a received frame disagreeing about bit 24 is reported once', async () => {
     // here — and one holding it constant never will.
     const fan = await device({ speed: '2', onoff: true, bit24: 0 });
     const odd = key => {
-        const whole = buildFrame(ADDRESS, key);
+        const whole = buildFrame(ADDRESS, key, 0);
         return [...whole.slice(0, 24), 1];
     };
 
@@ -476,7 +476,7 @@ test('a received frame disagreeing about bit 24 is reported once', async () => {
 
 test('an agreeing bit 24 says nothing at all', async () => {
     const fan = await device({ speed: '2', onoff: true, bit24: 0 });
-    await receive(fan, buildFrame(ADDRESS, 'fan.speed.4'));
+    await receive(fan, buildFrame(ADDRESS, 'fan.speed.4', 0));
 
     assert.equal(fan.logs.filter(line => line.includes('arrived with bit 24')).length, 0);
     assert.equal(fan.capabilityValues.lucci_speed, '4');
