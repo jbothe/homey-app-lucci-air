@@ -104,7 +104,7 @@ So the slider steps with presses, and the hold is kept for the one job it is exa
 |---|---|---|
 | 0% or 100%, position known | `|k - position|` presses **plus 4**, and let the end absorb them | **yes** — saturation |
 | 0% or 100%, position unknown | 36 presses, enough to arrive from the far side | **yes** — saturation |
-| anything else, position known | `|k - position|` presses, ~573ms each | **yes** — one press, one step |
+| anything else, position known | `|k - position|` presses, 573ms each | **yes** — one press, one step |
 | anything else, position unknown | saturate to the nearer end, then step | **yes**, but slow |
 | calibrate / repair | 36 presses into an end stop | **yes** — cannot fail |
 
@@ -126,7 +126,20 @@ being deliberately calibrated. Position is tracked between moves
 and corrected from what the app overhears the handset do, but it is never *relied* on: every target
 is reachable from a saturated anchor, and calibrating cannot fail.
 
-Two implementation notes follow from the timings. A move takes seconds, so a new target arriving
+**573ms a step is measured from the start of one press to the start of the next**, and getting that
+wrong is the single most consequential mistake in this app so far. `signal.tx()` resolves when Homey
+has *queued* a transmission, not when it has finished, and a press is 423ms of airtime — so code
+that awaits `tx` and then waits 150ms is laying the next burst on top of the last. The receiver
+reads a continuous stream of one code as a button held down, not as a run of presses.
+
+It was found on the light's on/off, where two quick taps sent two toggles 134ms apart and the
+fitting moved once. The brightness stepping had the same fault and would have behaved the same way:
+a thirty-press move going out as one unbroken transmission and moving the light a single step. Every
+press now goes through [`lib/press-queue.js`](lib/press-queue.js), which spaces them from the right
+instant, and the arithmetic is re-derived from the signal definition in its tests so the two cannot
+drift.
+
+Two further implementation notes follow from the timings. A move takes seconds, so a new target arriving
 mid-move must **cancel the one in flight** rather than queue behind it, or dragging the slider would
 back up a minute of transmission. And the device should reflect the target immediately while the
 transmission catches up, as a thermostat does.

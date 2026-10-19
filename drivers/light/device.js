@@ -4,15 +4,8 @@ const Homey = require('homey');
 const { SIGNAL_ID, ADDRESS_LENGTH, buildFrame, sameAddress } = require('../../lib/lucci-protocol');
 const position = require('../../lib/light-position');
 const { reflect } = require('../../lib/reflect');
+const { pressQueue, PRESS_INTERVAL } = require('../../lib/press-queue');
 
-// Between presses, in milliseconds.
-//
-// A press is 9 frames and ~423ms of airtime. The gap is the conservative figure
-// from APP_PLAN.md: it gives the receiver time to settle rather than driving it
-// at the handset's maximum cadence for seconds at a stretch, which is what made
-// one Homey command register as two presses on the sibling RC300 app. 573ms a
-// step is what every timing in light-position.js is reckoned against.
-const PRESS_GAP = 150;
 
 // How long to wait before saying a move is still going, in milliseconds. A nudge
 // of a step or two is done inside this; only the long moves get a line.
@@ -21,6 +14,12 @@ const SLOW_MOVE = 3000;
 class LucciLightDevice extends Homey.Device {
     async onInit() {
         this.signal = this.homey.rf.getSignal433(SIGNAL_ID);
+
+        // Every press this device makes goes through here, so no two are ever
+        // laid on top of each other. See lib/press-queue.js: tx() resolves when
+        // Homey has queued a transmission, not when it has finished, and a press
+        // is 423ms of airtime.
+        this.press = pressQueue({ wait: ms => this.wait(ms), now: () => Date.now() });
 
         // Learned from the user's own handset at pair time. Transmitting a
         // guessed address would drive whichever light answers to it.
@@ -101,16 +100,34 @@ class LucciLightDevice extends Homey.Device {
         }
     }
 
-    async send(key, why) {
+    // Queues one press, and says what became of it.
+    //
+    // `stillWanted` is checked at the moment the press reaches the front of the
+    // queue, not when it was asked for. That is the difference between
+    // cancelling a move and merely stopping it: a press is 423ms of airtime, so
+    // the next one waits 573ms for its turn, and a move abandoned during that
+    // wait has a press already committed. Dropping it there is what keeps the
+    // position estimate honest — a press that never went out must not be counted
+    // as a step, and a new move's plan must not be undercut by one that was
+    // supposed to be over.
+    async send(key, why, stillWanted = null) {
         const payload = buildFrame(this.address, key, this.bit24);
-        try {
-            await this.signal.tx(payload);
-            return true;
-        } catch (err) {
-            this.error(`tx ${key} failed (${why}):`, err.message);
-            this.error(`  payload was [${payload.join('')}]`);
-            return false;
-        }
+
+        return this.press(async () => {
+            if (stillWanted !== null && !stillWanted()) {
+                this.log(`tx ${key} dropped before it reached the air (${why})`);
+                return 'skipped';
+            }
+
+            try {
+                await this.signal.tx(payload);
+                return 'sent';
+            } catch (err) {
+                this.error(`tx ${key} failed (${why}):`, err.message);
+                this.error(`  payload was [${payload.join('')}]`);
+                return 'failed';
+            }
+        });
     }
 
     // One stateless toggle code behind a capability that means a state.
@@ -147,7 +164,7 @@ class LucciLightDevice extends Homey.Device {
         // that is about to be switched, and those are ignored while it is off.
         this.cancelMove(`onoff ${value}`);
 
-        if (!await this.send('light.onoff', `onoff ${value}`)) {
+        if (await this.send('light.onoff', `onoff ${value}`) !== 'sent') {
             // The belief goes back: nothing reached the light.
             this.lit = believed;
             throw new Error(this.homey.__('errors.tx_failed'));
@@ -167,7 +184,7 @@ class LucciLightDevice extends Homey.Device {
         this.lit = !believed;
         this.cancelMove('toggle');
 
-        if (!await this.send('light.onoff', 'toggle')) {
+        if (await this.send('light.onoff', 'toggle') !== 'sent') {
             this.lit = believed;
             throw new Error(this.homey.__('errors.tx_failed'));
         }
@@ -185,7 +202,7 @@ class LucciLightDevice extends Homey.Device {
         if (!this.isOn(key)) return;
 
         this.cancelMove(key);
-        if (!await this.send(key, key)) throw new Error(this.homey.__('errors.tx_failed'));
+        if (await this.send(key, key) !== 'sent') throw new Error(this.homey.__('errors.tx_failed'));
 
         this.position = position.stepped(this.position, key);
         await this.rememberPosition();
@@ -226,7 +243,7 @@ class LucciLightDevice extends Homey.Device {
 
         const target = end === 'brightest' ? position.MAX : position.MIN;
         const made = position.plan(null, target);
-        const seconds = Math.ceil(position.airtime(made.moves, PRESS_GAP + 423) / 1000);
+        const seconds = Math.ceil(position.airtime(made.moves, PRESS_INTERVAL) / 1000);
 
         this.log(`calibrating to ${end}: ${made.moves[0].presses} presses, about ${seconds}s`);
         this.startMove(made, `calibrate to ${end}`);
@@ -277,7 +294,16 @@ class LucciLightDevice extends Homey.Device {
                     return;
                 }
 
-                if (!await this.send(move.key, token.why)) {
+                const outcome = await this.send(move.key, token.why, () => !token.cancelled);
+
+                if (outcome === 'skipped') {
+                    // Cancelled while this press waited its turn, so it never
+                    // went out and is not a step.
+                    await this.rememberPosition();
+                    this.log(`move stopped after ${sent}/${total} presses; ${this.describePosition()}`);
+                    return;
+                }
+                if (outcome === 'failed') {
                     await this.rememberPosition();
                     throw new Error(`transmission failed after ${sent}/${total} presses`);
                 }
@@ -292,8 +318,6 @@ class LucciLightDevice extends Homey.Device {
                     announced = true;
                     this.log(`move (${token.why}) is ${sent}/${total} presses in`);
                 }
-
-                await this.wait(PRESS_GAP);
             }
 
             // A move that drove into an end stop knows where the light is,

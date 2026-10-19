@@ -38,7 +38,7 @@ one of them.
 | `sof` | `497,590` nine times, then `497` | ten pulses, nine gaps, in us |
 | `words` | `[295,797]`, `[790,301]` | index 0 is bit `0`, index 1 is bit `1` |
 | `interval` | `9448` | gap between repetitions |
-| `repetitions` | `9` | transmit only; matches the handset |
+| | `repetitions` | `9` | transmit only; matches the handset, and sets the 423ms airtime of one press |
 | `sensitivity` | `0.2` | match tolerance (receive), see below |
 | `rxTimeout` | `255` | receive only; a frame is ~37.6ms, well past the 10ms default |
 | `minimalLength` / `maximalLength` | `24` / `25` | see "Receiving" below |
@@ -67,6 +67,25 @@ Positions 6 to 18 are tight — pulses 494-498, gaps 588-596 — while positions
 first gap measures 612 against 588 at the end) and 20 to 25 frames per position had to be discarded
 there entirely. That pattern is the receiver settling at the start of a burst, not the handset
 changing its timing, so the stable region is the better estimate of what actually goes out.
+
+## One press is 423ms, and that is a transmit-side constraint
+
+Nine repetitions at 47ms each — a 37.6ms frame plus the 9448us interval — so **a press occupies
+423ms of air.** The figure appears above as a timing; it matters as a rule.
+
+`signal.tx()` resolves when Homey has *queued* a transmission, not when it has finished. So anything
+that awaits `tx` and immediately transmits again lays one burst on top of the last, and **the
+receiver reads a continuous stream of one code as a button held down rather than as several
+presses.** Two toggles 134ms apart moved the light once; the fan's own sequences at 636ms and 716ms
+apart were heard correctly, which is the same rule seen from the other side.
+
+So consecutive presses are spaced 573ms apart, start to start: the 423ms of airtime plus a 150ms
+silence for the button to come up. There is no measurement of the fitting's own release threshold —
+only that 636ms worked and 134ms did not.
+
+This is the mirror of the caution about `repetitions`. Transmitting *longer* than the handset made a
+sibling app's receiver count one command as two presses; transmitting *sooner* than the handset makes
+this one count two commands as a single press.
 
 ## Commands
 

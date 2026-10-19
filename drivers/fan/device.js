@@ -5,6 +5,7 @@ const {
     SIGNAL_ID, ADDRESS_LENGTH, FAN_SPEEDS, buildFrame, sameAddress,
 } = require('../../lib/lucci-protocol');
 const { reflect } = require('../../lib/reflect');
+const { pressQueue } = require('../../lib/press-queue');
 
 // The speed a fan starts on when it has never been given one.
 //
@@ -39,6 +40,13 @@ const RX_REPEAT_WINDOW = 2000;
 class LucciFanDevice extends Homey.Device {
     async onInit() {
         this.signal = this.homey.rf.getSignal433(SIGNAL_ID);
+
+        // As on the light: tx() resolves at queue time, so two commands asked
+        // for in quick succession would be transmitted on top of each other and
+        // heard as one long press. The fan's own sequences on the hardware
+        // happened to be 636ms and 716ms apart, clear of the 423ms airtime,
+        // which is why this never showed up here. See lib/press-queue.js.
+        this.press = pressQueue({ wait: ms => this.wait(ms), now: () => Date.now() });
 
         // The address is learned from the user's own handset during pairing.
         // There is no default: transmitting an address we guessed would drive
@@ -197,19 +205,26 @@ class LucciFanDevice extends Homey.Device {
     // `tx fan.speed.2`, and they are different paths through this file.
     async send(key, why) {
         const payload = buildFrame(this.address, key, this.bit24);
-        const startedAt = Date.now();
 
-        try {
-            // tx() resolves once Homey has queued the transmission, not once the
-            // repetitions have finished going out, so this time is call latency
-            // rather than the ~423ms a press actually occupies.
-            await this.signal.tx(payload);
-            this.log(`tx ${key} ok (${why}, queued in ${Date.now() - startedAt}ms)`);
-        } catch (err) {
-            this.error(`tx ${key} failed after ${Date.now() - startedAt}ms (${why}):`, err.message);
-            this.error(`  payload was [${payload.join('')}]`);
-            throw err;
-        }
+        return this.press(async () => {
+            const startedAt = Date.now();
+            try {
+                // tx() resolves once Homey has queued the transmission, not once
+                // the repetitions have finished going out, so this time is call
+                // latency rather than the 423ms a press actually occupies — which
+                // is the whole reason presses are queued rather than awaited.
+                await this.signal.tx(payload);
+                this.log(`tx ${key} ok (${why}, queued in ${Date.now() - startedAt}ms)`);
+            } catch (err) {
+                this.error(`tx ${key} failed after ${Date.now() - startedAt}ms (${why}):`, err.message);
+                this.error(`  payload was [${payload.join('')}]`);
+                throw err;
+            }
+        });
+    }
+
+    wait(ms) {
+        return new Promise(resolve => { this.homey.setTimeout(resolve, ms); });
     }
 
     // Both capabilities, one command.

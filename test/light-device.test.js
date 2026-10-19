@@ -8,9 +8,11 @@ const Module = require('node:module');
 const { ADDRESS_LENGTH, identifyFrame, buildFrame } = require('../lib/lucci-protocol');
 const position = require('../lib/light-position');
 
-// As in test/device.test.js, with one difference that matters: setTimeout fires
-// at once. A move is dozens of presses 150ms apart, and the point of these
-// tests is which codes go out in which order, not how long that takes.
+// As in test/device.test.js, with one difference that matters: the clock runs
+// fast. Delays are scaled rather than ignored, because presses are deliberately
+// spaced — a press is 423ms of airtime and two laid on top of each other are
+// heard as one (see lib/press-queue.js) — so a test that collapsed every delay
+// to zero could not tell a cancelled move from a completed one.
 class FakeDevice {
     constructor() {
         this.storeValues = {};
@@ -22,7 +24,9 @@ class FakeDevice {
         this.txFails = false;
 
         this.homey = {
-            setTimeout: (fn) => setTimeout(fn, 0),
+            // 573ms of real spacing becomes 6ms here: fast enough for a suite,
+            // slow enough that order and interruption still mean something.
+            setTimeout: (fn, ms = 0) => setTimeout(fn, Math.ceil(ms / 100)),
             clearTimeout: (...args) => clearTimeout(...args),
             __: key => key,
             rf: {
@@ -279,7 +283,7 @@ test('a new target cancels the move in flight rather than queueing behind it', a
     const device = await light({ at: 0 });
 
     device.listeners.dim(position.toDim(position.MAX), {});
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise(resolve => setTimeout(resolve, 20));
     const partway = device.sent.length;
     assert.ok(partway > 0 && partway < position.MAX, `sent ${partway} of a 31-press move`);
 
@@ -288,6 +292,9 @@ test('a new target cancels the move in flight rather than queueing behind it', a
     assert.ok(device.logs.some(line => line.includes('cancelled the move in flight')), device.logs.join(' | '));
     // And the presses that did go out were counted, so the estimate survived.
     assert.equal(device.position, 2);
+    // The move really was cut short rather than run to the end and corrected:
+    // a full run up and back would be sixty presses.
+    assert.ok(device.sent.length < 40, `sent ${device.sent.length} presses in total`);
 });
 
 test('dim to where the light already is sends nothing', async () => {
@@ -301,7 +308,7 @@ test('dim to where the light already is sends nothing', async () => {
 test('a move cut off by a transmission failure keeps what it managed', async () => {
     const device = await light({ at: 20 });
     device.listeners.dim(position.toDim(10), {});
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise(resolve => setTimeout(resolve, 15));
 
     device.txFails = true;
     await device.moving;
@@ -373,7 +380,7 @@ test('a press at the handset mid-move abandons the move', async () => {
     // user's own press is the thing that happened.
     const device = await light({ at: 0 });
     device.listeners.dim(position.toDim(position.MAX), {});
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise(resolve => setTimeout(resolve, 20));
 
     await receive(device, 'light.dimmer');
     await device.moving;
@@ -405,7 +412,7 @@ test('following the handset never transmits', async () => {
 test('shutting down stops the radio and the move', async () => {
     const device = await light({ at: 0 });
     device.listeners.dim(position.toDim(position.MAX), {});
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise(resolve => setTimeout(resolve, 20));
 
     await device.onUninit();
     await device.moving;
@@ -482,4 +489,41 @@ test('a repeated request still sends nothing, even back to back', async () => {
     await new Promise(resolve => setTimeout(resolve, 1));
 
     assert.equal(counted(device, 'light.onoff'), 1, 'asking for on twice toggled it twice');
+});
+
+test('a press already queued when a move is cancelled is dropped, not counted', async () => {
+    // A press is 423ms of airtime, so the next one waits its turn — and a move
+    // abandoned during that wait has a press already committed. Letting it go
+    // out would move the light one step past where the new move's plan assumed
+    // it was, and the estimate would be wrong by exactly that step.
+    const device = await light({ at: 0 });
+
+    device.listeners.dim(position.toDim(position.MAX), {});
+    await new Promise(resolve => setTimeout(resolve, 20));
+    const partway = device.position;
+
+    device.cancelMove('a test');
+    await device.moving;
+
+    assert.ok(device.logs.some(line => line.includes('dropped before it reached the air')),
+        device.logs.join(' | '));
+    // Whatever went out was counted; nothing that did not go out was.
+    assert.equal(device.position, partway);
+    assert.equal(device.sent.length, partway, 'presses sent and steps counted disagree');
+});
+
+test('every press of a move is spaced, so none lands on the one before', async () => {
+    // The fault this is all for: two transmissions laid on top of each other are
+    // heard as one long press, so a thirty-press move moved the light once.
+    const device = await light({ at: 10 });
+    const at = [];
+    device.signal = { tx: async () => { at.push(Date.now()); } };
+
+    await request(device, 'dim', position.toDim(16));
+
+    assert.equal(at.length, 6);
+    for (let i = 1; i < at.length; i += 1) {
+        // The harness clock runs at 1/100, so the real 573ms shows up as ~6ms.
+        assert.ok(at[i] - at[i - 1] >= 4, `press ${i} came ${at[i] - at[i - 1]}ms after ${i - 1}`);
+    }
 });
