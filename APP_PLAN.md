@@ -43,7 +43,7 @@ button is pressed. Setting `lucci_speed` therefore implies `onoff` true.
 | `onoff` | standard | one stateless toggle code |
 | `lucci_brighter` | boolean, `uiComponent: "button"` | one tap, one step — always correct |
 | `lucci_dimmer` | boolean, `uiComponent: "button"` | likewise |
-| `dim` | standard slider | only with tracked position — see below |
+| `dim` | standard slider | 32 steps, driven by discrete presses — see below |
 
 Brightness is **relative**: one code for brighter, one for dimmer, at any level, because the fitting
 holds the level and the handset does not. Four captures at the two ends of a range of about twenty
@@ -54,71 +54,47 @@ has to be remembered. They are correct however the light got to where it is, whi
 claim. Flow actions alone would be poor UX for something people adjust by hand, so these are
 capabilities, on the tile.
 
-### The slider, and why it is possible after all
+### The slider: discrete presses, with holds only at the ends
 
-A hold was recorded: **holding the handset's dimmer sends the same code repeatedly at the same
-9.4ms cadence as a single press** — 59 frames over 2.76s against a press's 9 — with no
-hold-specific code. So the app can emulate a hold faithfully by transmitting the same payload with
-more repetitions, which is far quicker than sending discrete presses.
+All three numbers are now measured on the hardware:
 
-That makes a real `dim` slider workable, on three conditions:
+| | |
+|---|---|
+| steps across the range | **32** (a power of two; the fitting probably holds a 5-bit level) |
+| a continuous hold, maximum to minimum | **~7s** (5 timings, 6.4-7.9s) |
+| a single press | 9 frames, 423ms, **exactly one step** |
+| both ends | **saturate** — a hold at minimum stays at minimum, at maximum stays at maximum |
 
-1. **The app tracks position itself**, 0 to 31. A move to `k` transmits the appropriate code with
-   roughly `|k - position| x framesPerStep` repetitions, then stores `k`.
-2. **Receiving keeps it honest.** Every handset press and hold is overheard, so the estimate can be
-   corrected as the household uses the remote rather than drifting silently. A burst of frames is
-   one press; a longer run is a hold, and its duration converts to steps at the same rate.
-3. **A calibrate action can always re-anchor it.** Transmitting well past the full range drives the
-   light to an extreme, where it saturates — confirmed at both ends — and position is then known
-   exactly. Offered as a flow action and as a repair step, so a user who thinks the slider has
-   drifted can fix it in one tap.
+A hold therefore steps every ~219ms, against ~423ms for a press. Against conservative discrete
+presses — a press plus a 150ms gap, 573ms a step — **the hold is only 2.6x faster.** That changes
+the mechanism, because the hold's small advantage is not worth what it costs:
 
-Unlike the RC300 lesson — where transmitting longer than the real remote made the receiver register
-one command as two presses — a long transmission here *is* what the handset does on a hold, so
-extended repetition is correct for brightness specifically. It is not licence to raise
-`repetitions` for any other command.
+- **A press is exactly one step.** Stepping by presses needs no rate figure at all, so there is
+  nothing to estimate wrongly and no error to accumulate over a session.
+- **The receiver gets time to settle** between commands, rather than being driven at the handset's
+  maximum cadence for seconds at a stretch.
+- **Hold emulation depends on a figure with a 20% spread.** 6.4 to 7.9 seconds across five timings
+  is fine for knowing how long to saturate, and far too loose to position against: at 219ms a step,
+  that spread is three or four steps of error on a full-range move.
 
-The slider is marked best-effort in the app's own documentation. The two buttons are not, and remain
-the thing to reach for when it matters.
+So the slider steps with presses, and the hold is kept for the one job it is exact at.
 
-### The range is 32 steps, so the slider must emulate a hold
+| Target | Mechanism | Exact? |
+|---|---|---|
+| 0% or 100% | one hold, 10s (7.9s observed worst case plus margin) | **yes** — saturation |
+| anything else, position known | `|k - position|` presses, ~573ms each | **yes** — one press, one step |
+| anything else, position unknown | saturate to the nearer end, then step | **yes**, but slow |
+| calibrate / repair | one hold, 10s | **yes** — cannot fail |
 
-Counted on the hardware: **32 brightness steps**. A power of two, which suggests the fitting holds
-a 5-bit level — not something the recordings can confirm, but it fits.
+A typical adjustment is a nudge of a few steps, so 1-2 seconds. A full-range move is ~18s by presses
+or 10s by saturating, and the extremes take the fast path anyway. Position is tracked between moves
+and corrected from what the app overhears the handset do, but it is never *relied* on: every target
+is reachable from a saturated anchor, and calibrating cannot fail.
 
-32 settles the mechanism. As discrete presses a full-range move is 32 x 423ms = **13.5s of airtime
-before any gaps**, which is no use as a slider. So emulating a hold with extra repetitions is not a
-refinement here, it is the only workable approach.
-
-If the 2.76s hold that was recorded crossed the whole range, then a step is ~1.8 frames or ~87ms,
-a full-range move takes 2.76s and a four-step nudge 350ms — a perfectly usable slider. That "if" is
-the one measurement still missing.
-
-### It saturates at both ends, which makes the slider recoverable
-
-Confirmed on the hardware: **holding the dimmer at minimum stays at minimum, and holding brighter at
-maximum stays at maximum.** Neither wraps.
-
-That is worth more to the design than the step rate is, for three reasons:
-
-- **Overshoot is free.** The app can transmit more than it needs at either end without the light
-  running away, so nothing has to be exact.
-- **Position is always recoverable.** Driving deliberately past an end anchors the estimate: after a
-  generous dim-down the light *is* at step 0, whatever the app previously believed. Calibrate is a
-  flow action and a repair step, and it cannot fail.
-- **0% and 100% are exact without knowing the rate at all.** Those two are just "saturate downward"
-  and "saturate upward". Only intermediate values need a frames-per-step figure.
-
-So the slider degrades gracefully rather than being all-or-nothing, and a drifted estimate is never
-worse than one calibrate away.
-
-### One measurement left, and it only buys the middle
-
-**From maximum, hold the dimmer and time how long until the light stops changing.** That elapsed
-time is **T**, and `framesPerStep = (T x 21.4) / 32`.
-
-Without it the light still ships complete: two exact buttons, and a slider that can reach 0% and
-100% by saturating. With it, every intermediate position becomes targetable too.
+Two implementation notes follow from the timings. A move takes seconds, so a new target arriving
+mid-move must **cancel the one in flight** rather than queue behind it, or dragging the slider would
+back up a minute of transmission. And the device should reflect the target immediately while the
+transmission catches up, as a thermostat does.
 
 ### Dim does nothing while the light is off
 
@@ -193,8 +169,9 @@ against itself.
    per-position rather than uniform.
 4. **Direction and timer** on the fan.
 5. **Receiving**, and state mirroring from the handset.
-6. **Light driver**: `onoff` plus the two brightness buttons. The `dim` slider follows once N and
-   T are measured; the device is complete and honest without it.
+6. **Light driver**: `onoff` and the two brightness buttons first — they need no state and no
+   timings. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
+   and a calibrate action.
 7. **Flow cards**, store assets, README and locales.
 
 Steps 1 and 2 can proceed now. Step 3 is where the protocol stops being a hypothesis.
@@ -207,9 +184,12 @@ Worth stating in the app's own documentation rather than discovering in a suppor
   and the app cannot know when the fan's timer expires.
 - **The light's on/off can invert** if its state is changed by something Homey cannot hear — a wall
   switch, a power cut, a second handset. The next toggle then does the opposite of what was asked.
-- **The `dim` slider's position is an estimate**, corrected by what the app overhears and re-anchored
-  by calibrating, which works because the light saturates at both ends rather than wrapping. The two
-  brightness buttons, and the slider's 0% and 100%, are exact and need no estimate at all.
+- **The `dim` slider's position is an estimate between moves**, corrected by what the app overhears
+  and re-anchored by calibrating, which works because the light saturates at both ends rather than
+  wrapping. Each individual step is exact — one press, one step — so error enters only by missing
+  what the handset did, not by mis-timing a transmission.
+- **A slider move takes seconds**, up to ~18s across the full range. The app reflects the target
+  immediately and cancels any move still in flight when a new one arrives.
 - **Speed, direction and timer survive this**, because every handset press is absolute and received.
 - **Nothing is reported by the fan.** The radio is one-way; everything Homey shows is what it
   commanded or overheard.
