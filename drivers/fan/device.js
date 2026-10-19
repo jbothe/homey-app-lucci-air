@@ -114,6 +114,16 @@ class LucciFanDevice extends Homey.Device {
         // mirror of the bug that had the tile stuck off while it ran.
         this.registerCapabilityListener('lucci_timer', async value => {
             await this.send(`fan.timer.${value}`, 'lucci_timer');
+
+            // Asked at the only moment it can be answered: a timer code has
+            // just gone out to a fan that was stopped, which is the experiment.
+            // Cheaper than remembering to run it on purpose, and it will fire
+            // the first time anyone happens to do this.
+            if (this.getCapabilityValue('onoff') !== true) {
+                this.log('timer sent while the fan was off — did the fan start?'
+                    + ' If it did, lucci_timer should imply onoff true the way lucci_direction does.'
+                    + ' Open question in RF_PROTOCOL.md under Caveats.');
+            }
         });
 
         // Follow the handset, so Homey does not show stale state. Because speed,

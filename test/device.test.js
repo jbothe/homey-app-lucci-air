@@ -283,6 +283,17 @@ test('the timer implies nothing, not having been tested stopped', async () => {
 
     assert.deepEqual(keysSent(fan), ['fan.timer.8h']);
     assert.equal(fan.capabilityValues.onoff, false);
+
+    // And it asks the question at the only moment it can be answered, rather
+    // than waiting for someone to remember to run the experiment.
+    assert.ok(fan.logs.some(line => line.includes('did the fan start?')), fan.logs.join(' | '));
+});
+
+test('the timer asks nothing when the fan was already running', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    await setOne(fan, 'lucci_timer', '2h');
+
+    assert.ok(!fan.logs.some(line => line.includes('did the fan start?')));
 });
 
 test('a direction change while the fan runs leaves onoff alone', async () => {
