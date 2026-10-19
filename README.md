@@ -11,24 +11,32 @@ needs no hub, no bridge and no account:
 
 ## Status
 
-**Phase 1: capturing the protocol.** No app yet — the drivers come once the handset's frames are
-understood.
+**Phase 1 is done: the protocol is settled.** No app yet — the drivers come next.
 
-- [`CAPTURE_GUIDE.md`](CAPTURE_GUIDE.md) — how to record the handset, and how to tell a good
+- [`RF_PROTOCOL.md`](RF_PROTOCOL.md) — the frame layout, all sixteen command codes, and what each
+  control does. Reverse-engineered from 33 recordings covering every button.
+- [`.homeycompose/signals/433/lucci.json`](.homeycompose/signals/433/lucci.json) — the signal
+  definition.
+- [`APP_PLAN.md`](APP_PLAN.md) — what the protocol makes possible, and what it rules out.
+- [`CAPTURE_GUIDE.md`](CAPTURE_GUIDE.md) — how to record a handset, and how to tell a good
   recording from a bad one.
 - [`tools/analyse-capture.js`](tools/analyse-capture.js) — reads a capture and reports the frame
-  structure, symbol alphabet, field map and a candidate Homey signal definition.
-- `RF_PROTOCOL.md` — not written yet. It is the output of phase 1.
+  structure, symbol alphabet, field map and a candidate signal definition.
 
 ```bash
 npm run analyse        # read captures/raw-captures.txt
-npm test               # 25 tests, no hardware or captures needed
+npm test               # 38 tests, no hardware or captures needed
 ```
 
 The analyser assumes nothing about the protocol; it infers the structure from the durations. It is
-checked against the Bear handset's recordings, where the answer is already documented, and recovers
-that protocol's preamble, alphabet, frame length, repeat count, interval and tolerance without
-being given any of them.
+checked against the sibling Bear handset's recordings, where the answer is already documented, and
+recovers that protocol's preamble, alphabet, frame length, repeat count, interval and tolerance
+without being given any of them.
+
+In short, what the handset turned out to be: a 19-duration preamble, 25 bits, a 16-bit address and a
+fan/light selector. Fan speed, direction and the timer are **absolute** — the handset tracks the
+state and sends the one it is moving to — so Homey can command them and know the result. The
+light's brightness is **relative**, so it can only be stepped.
 
 Recordings are **not committed** — they carry the code that operates the fan.
 
