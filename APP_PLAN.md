@@ -34,7 +34,28 @@ app's `fan_level` and `flame_level`.
 **`onoff` is asymmetric, because the protocol is.** There is no "fan on" command — only an off code
 and six absolute speed codes. So `false` sends the off code, and `true` sends the stored speed's
 code, which is exactly how the handset behaves: the user observed the fan starting when a speed
-button is pressed. Setting `lucci_speed` therefore implies `onoff` true.
+button is pressed. Setting `lucci_speed` therefore implies `onoff` true. **Confirmed on the
+hardware**, in both directions and from standing.
+
+**The two share one debounced listener**, which is Homey's documented pattern for capabilities that
+map to a single command, as `onoff` and `dim` do on a light. Three reasons here, two of them found
+by running it:
+
+- Every frame this driver sends is one absolute speed code or the off code. There is never a power
+  command *and* a speed to coordinate, so two listeners were two routes to the same single frame.
+- `onoff` leads when one request carries both, so a flow asking for off and a speed at once sends
+  one frame rather than two contradictory ones.
+- **A drag across the picker emits a value per step.** The first run put three on air inside 2.1
+  seconds, each ~423ms of airtime, so they were queuing behind each other. Debounced at Homey's
+  default 250ms a drag is one transmission of the step it landed on — and because speed is absolute,
+  that was the only one carrying any information anyway.
+
+**Implying `onoff` has to be written after the listener resolves, not inside it.** Setting it from
+within the speed listener did not stick: the picker transmitted, the fan moved, and the tile stayed
+off until an `onoff` toggle — which did nothing, the fan already running — put it right. Homey writes
+the capabilities a request carried when the listener resolves, so the implied one waits its turn and
+then reads itself back, which is what makes a log able to settle this rather than a user noticing it
+again.
 
 ## Light capabilities
 

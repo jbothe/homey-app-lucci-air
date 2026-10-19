@@ -15,6 +15,10 @@ const { SIGNAL_ID, ADDRESS_LENGTH, FAN_SPEEDS, buildFrame } = require('../../lib
 // or overheard, which is what `onoff` true sends.
 const DEFAULT_SPEED = '2';
 
+// How long Homey pools changes to the two capabilities before calling the
+// listener once, in milliseconds. Homey's own default for a coupled listener.
+const DEBOUNCE = 250;
+
 class LucciFanDevice extends Homey.Device {
     async onInit() {
         this.signal = this.homey.rf.getSignal433(SIGNAL_ID);
@@ -40,11 +44,40 @@ class LucciFanDevice extends Homey.Device {
             this.log(`speed: resumed step ${stored}`);
         } else {
             this.log(`speed: none stored (${JSON.stringify(stored)}), starting at step ${DEFAULT_SPEED}`);
-            await this.setCapabilityValue('lucci_speed', DEFAULT_SPEED).catch(this.error);
+            await this.set('lucci_speed', DEFAULT_SPEED);
         }
 
-        this.registerCapabilityListener('onoff', this.onCapabilityOnOff.bind(this));
-        this.registerCapabilityListener('lucci_speed', this.onCapabilitySpeed.bind(this));
+        // One listener for both, which is Homey's documented pattern for
+        // capabilities that map to a single command — as `onoff` and `dim` do on
+        // a light, and as these do here: every frame this driver sends is one
+        // absolute speed code or the off code, never a power code and a speed.
+        //
+        // The 250ms debounce is worth having on a radio. A drag across the picker
+        // emits a value per step, and the first run showed three arriving inside
+        // 2.1 seconds — each ~423ms of airtime, so they were queuing up behind
+        // each other. Debounced, a drag is one transmission of the step it
+        // landed on, and because speed is absolute that is the only one that
+        // carried any information.
+        this.registerMultipleCapabilityListener(
+            ['onoff', 'lucci_speed'], this.onCapabilities.bind(this), DEBOUNCE,
+        );
+    }
+
+    // setCapabilityValue with the failure actually reported.
+    //
+    // `.catch(this.error)` was the original, and it is worse than no handler:
+    // `error` is a prototype method, so passing it unbound means a rejection
+    // throws a second time inside the handler, and the first error never reaches
+    // the log. That is how `onoff` came to be silently wrong — the write might
+    // have been failing all along and saying nothing.
+    async set(capability, value) {
+        try {
+            await this.setCapabilityValue(capability, value);
+            return true;
+        } catch (err) {
+            this.error(`could not set ${capability} to ${JSON.stringify(value)}:`, err.message);
+            return false;
+        }
     }
 
     // Prefixes a command with this fan's address and transmits it.
@@ -73,35 +106,65 @@ class LucciFanDevice extends Homey.Device {
         }
     }
 
+    // Both capabilities, one command.
+    //
     // `onoff` is asymmetric, because the protocol is: there is one off code and
     // six absolute speed codes, and no "on". So off sends the off code, and on
-    // sends the stored speed's code — which is exactly how the handset behaves,
-    // where a fan is started by pressing a speed button.
-    async onCapabilityOnOff(value) {
-        if (!value) {
+    // sends the stored speed's code — which is how the handset behaves, where a
+    // fan is started by pressing a speed button. A speed code therefore starts
+    // the fan as well as setting the step, confirmed on the hardware, and there
+    // is no guard against setting a speed while off, unlike the sibling RC300:
+    // here that is the ordinary way to start it.
+    //
+    // Only the capabilities that changed arrive, so the rest come from what is
+    // stored.
+    async onCapabilities(values) {
+        // `onoff` leads when both change, which is Homey's guidance for coupled
+        // capabilities: a flow asking for off and a speed in one go means off,
+        // and the speed is kept for whenever the fan is next turned on.
+        if (values.onoff === false) {
             await this.send('fan.off', 'onoff false');
             return;
         }
 
-        const speed = this.getCapabilityValue('lucci_speed');
-        const step = FAN_SPEEDS.includes(speed) ? speed : DEFAULT_SPEED;
-        await this.send(`fan.speed.${step}`, `onoff true, stored step ${step}`);
+        const asked = values.lucci_speed;
+        const stored = this.getCapabilityValue('lucci_speed');
+        const step = [asked, stored, DEFAULT_SPEED].find(v => FAN_SPEEDS.includes(v));
+        const why = asked === undefined ? `onoff true, stored step ${step}` : 'lucci_speed';
 
-        // Only once the frame is away, and only if the fallback was used, so the
-        // tile shows the step the fan is actually on.
-        if (step !== speed) await this.setCapabilityValue('lucci_speed', step).catch(this.error);
+        await this.send(`fan.speed.${step}`, why);
+
+        // The fan is now running, whichever capability asked for it. Homey sets
+        // the ones that were requested once this resolves, so the work here is
+        // the ones that were not — `onoff` after a speed change, and the speed
+        // itself when the fallback above had to supply it.
+        await this.reflect({ onoff: true, lucci_speed: step }, values);
     }
 
-    // A speed code starts the fan as well as setting the step — one absolute
-    // command, no power code needed first — so this implies `onoff` true. There
-    // is no guard against setting a speed while off, unlike the sibling RC300:
-    // on this protocol that is the ordinary way to start the fan.
-    async onCapabilitySpeed(value) {
-        await this.send(`fan.speed.${value}`, 'lucci_speed');
+    // Writes the capability values the request did not carry, and says whether
+    // they took.
+    //
+    // Deferred past this listener deliberately. Setting a capability from inside
+    // a listener for a different one did not stick: the speed picker transmitted
+    // and moved the fan while the tile stayed off, until an `onoff` toggle —
+    // which did nothing, the fan already running — put it right. Homey writes the
+    // requested capabilities when the listener resolves, so this waits its turn
+    // and then reads back what it wrote, which is what makes the next run's log
+    // able to settle it rather than leaving it to be noticed again.
+    async reflect(wanted, requested) {
+        const pending = Object.entries(wanted).filter(([capability, value]) => requested[capability] === undefined
+            && this.getCapabilityValue(capability) !== value);
+        if (pending.length === 0) return;
 
-        // setCapabilityValue, not triggerCapabilityListener: the fan is now
-        // running, and saying so must not transmit a second command.
-        await this.setCapabilityValue('onoff', true).catch(this.error);
+        this.homey.setTimeout(async () => {
+            for (const [capability, value] of pending) {
+                if (!await this.set(capability, value)) continue;
+
+                const now = this.getCapabilityValue(capability);
+                if (now === value) this.log(`${capability} -> ${JSON.stringify(value)}`);
+                else this.error(`${capability} would not hold ${JSON.stringify(value)}; reads ${JSON.stringify(now)}`);
+            }
+        }, 0);
     }
 }
 
