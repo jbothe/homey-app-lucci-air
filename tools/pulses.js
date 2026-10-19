@@ -98,6 +98,10 @@ const MIN_EXPLAINED = 0.6;
 const CONSENSUS_MIN = 2;
 
 const mean = values => values.reduce((a, b) => a + b, 0) / values.length;
+const median = values => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+};
 const modal = values => {
     const counts = new Map();
     for (const v of values) counts.set(v, (counts.get(v) || 0) + 1);
@@ -282,7 +286,23 @@ function splitFrames(durations, threshold) {
 function scoreAlignment(frames, sofLength, {
     floorPerFrame = SYMBOL_MIN_PER_FRAME, minExplained = MIN_EXPLAINED, maxWidth = MAX_CLUSTER_WIDTH,
 } = {}) {
-    const bodies = frames.map(f => f.durations.slice(sofLength));
+    // Which frames carry the same preamble. A preamble is identical on every
+    // repeat, so this is also what identifies the frames worth reading: a
+    // recorder that started mid-preamble delivers a frame of the right length
+    // whose payload is shifted, and reading it alongside the others would
+    // inject symbols that were never sent.
+    //
+    // Judged against the median rather than against each other. Requiring every
+    // frame to agree lets one truncated repeat — and the first repeat of a
+    // capture is often truncated — veto the whole reading.
+    const centre = Array.from({ length: sofLength }, (_, i) => median(frames.map(f => f.durations[i])));
+    const aligned = frames.filter(f => centre.every((value, i) => {
+        const seen = f.durations[i];
+        return seen <= value * (1 + CLUSTER_TOLERANCE) && seen >= value / (1 + CLUSTER_TOLERANCE);
+    }));
+    if (aligned.length / frames.length < minExplained) return null;
+
+    const bodies = aligned.map(f => f.durations.slice(sofLength));
     if (bodies.some(b => b.length < MIN_BODY_LENGTH)) return null;
 
     // Position parity inside the body is what tells a pulse from a gap, which
@@ -308,21 +328,14 @@ function scoreAlignment(frames, sofLength, {
     const types = new Map([...seen].filter(([, count]) => count >= floor));
     if (types.size < 2 || types.size > MAX_ALPHABET) return null;
 
-    // A preamble is identical on every repeat. Leading durations that vary are
-    // payload, and must not be cut away as preamble.
-    for (let i = 0; i < sofLength; i += 1) {
-        const column = frames.map(f => f.durations[i]);
-        if (Math.max(...column) > Math.min(...column) * (1 + CLUSTER_TOLERANCE)) return null;
-    }
-
-    // Nor may the preamble end on a symbol. Where it does, it has swallowed the
+    // The preamble may not end on a symbol. Where it does, it has swallowed the
     // first of the payload, and the reading loses a position off the front of
     // every frame. The test above does not catch it, because the leading
     // payload is the address and holds just as still as a preamble — and with a
     // single frame to go on it catches nothing at all.
     if (sofLength >= 2) {
-        const tail = `${clusterOf(frames[0].durations[sofLength - 2], pulseClusters)}`
-            + `,${clusterOf(frames[0].durations[sofLength - 1], gapClusters)}`;
+        const tail = `${clusterOf(centre[sofLength - 2], pulseClusters)}`
+            + `,${clusterOf(centre[sofLength - 1], gapClusters)}`;
         if (types.has(tail)) return null;
     }
 
@@ -348,7 +361,9 @@ function scoreAlignment(frames, sofLength, {
         }
         return fits;
     });
-    const explained = whole.length / bodies.length;
+    // Against every frame, not just the aligned ones, so a reading that had to
+    // discard half the capture to work is ranked below one that did not.
+    const explained = whole.length / frames.length;
     if (explained < minExplained) return null;
 
     return {
@@ -356,7 +371,10 @@ function scoreAlignment(frames, sofLength, {
         explained,
         residual,
         maxWidth,
-        sof: Array.from({ length: sofLength }, (_, i) => Math.round(mean(frames.map(f => f.durations[i])))),
+        aligned: aligned.length,
+        // Measured only over the frames that follow it, so a truncated repeat
+        // cannot drag the preamble's durations off.
+        sof: Array.from({ length: sofLength }, (_, i) => Math.round(mean(aligned.map(f => f.durations[i])))),
         pulseClusters,
         gapClusters,
         alphabet: alphabetFrom(types, pulseClusters, gapClusters),
@@ -656,5 +674,6 @@ module.exports = {
     pairRepeats,
     fieldRuns,
     mean,
+    median,
     modal,
 };

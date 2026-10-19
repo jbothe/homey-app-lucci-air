@@ -251,3 +251,49 @@ test('pairRepeats does not call two unreadable captures an agreement', () => {
 test('pairRepeats ignores a repeat whose first recording is missing', () => {
     assert.deepEqual(pairRepeats([{ label: 'Fan Direction (repeat)', distinct: [['0100', 6]] }]), []);
 });
+
+test('a repeat that began mid-preamble does not veto the reading', () => {
+    // The recorder arms part-way through the first transmission more often than
+    // not, delivering a frame of the usual length whose payload is shifted. Held
+    // against the other repeats as an equal, it makes the preamble look as
+    // though it varies, and no reading survives at all.
+    const frames = repeat(bits(BINARY_FRAME), 8);
+    const durations = synthesise({ ...BINARY, frames, jitter: 10 });
+
+    // Replace the first frame's preamble with the tail of one, as a recorder
+    // that started late would report it.
+    durations.splice(0, 2, 230, 870, 220);
+
+    const result = analyseCapture(durations);
+    assert.notEqual(result.alignment, null, 'no reading survived the truncated repeat');
+    assert.equal(result.alignment.sofLength, 2);
+    assert.deepEqual(result.distinct, [[BINARY_FRAME, 7]]);
+
+    // And the preamble is measured only over the repeats that carry it, so the
+    // truncated one cannot drag its durations off.
+    assert.ok(Math.abs(result.alignment.sof[0] - 4770) < 40, `sof ${result.alignment.sof}`);
+});
+
+test('a long preamble of repeated pulses is found, odd length and all', () => {
+    // The Lucci handset opens with ten short pulses rather than one long one,
+    // which comes to an odd number of durations and so shifts the payload onto
+    // the offsets the preamble's gaps used.
+    const sync = [];
+    for (let i = 0; i < 10; i += 1) sync.push(500, 595);
+    sync.pop();
+
+    const durations = synthesise({
+        sof: sync,
+        words: [[295, 797], [791, 301]],
+        interval: 9416,
+        frames: repeat(bits('0101110011110011101010100'), 9),
+        jitter: 10,
+        trailing: false,
+    });
+
+    const result = analyseCapture(durations);
+    assert.equal(result.alignment.sofLength, 19);
+    assert.equal(result.alignment.alphabet.length, 2);
+    assert.deepEqual(result.distinct, [['0101110011110011101010100', 9]]);
+    assert.ok(Math.abs(result.interval - 9416) < 60, `interval ${result.interval}`);
+});
