@@ -374,3 +374,45 @@ test('every press of a long move carries the learned bit', async () => {
     assert.ok(device.sent.length > 10, `only ${device.sent.length} presses`);
     for (const payload of device.sent) assert.equal(payload[24], 1);
 });
+
+// --- THROWAWAY: the discrete on/off experiment ------------------------------
+// Delete this block with lib/lucci-probe.js and the six capabilities.
+
+test('a probe button sends its code under the light selector', async () => {
+    const { PROBE_CODES, probeFrame } = require('../lib/lucci-probe');
+    const device = await light({ at: 10, bit24: 1 });
+
+    for (const code of PROBE_CODES) {
+        await request(device, `lucci_probe_${code}`, true);
+    }
+
+    assert.equal(device.sent.length, PROBE_CODES.length);
+    device.sent.forEach((payload, i) => {
+        assert.deepEqual(payload, probeFrame(ADDRESS, 1, PROBE_CODES[i]));
+        // Addressed to this fitting, carrying the bit 24 it expects: the probe
+        // is about the command field and nothing else.
+        assert.deepEqual(payload.slice(0, 16), ADDRESS);
+        assert.equal(payload[24], 1);
+        assert.deepEqual(payload.slice(16, 18), [0, 1], 'not the light selector');
+    });
+});
+
+test('a probe is not gated on the light being on', async () => {
+    // Unlike the brightness controls. Whether these codes do anything while the
+    // light is off is the sort of thing the experiment is for, so refusing to
+    // send them would answer the question by assuming it.
+    const device = await light({ on: false, at: 10 });
+    await request(device, 'lucci_probe_5', true);
+
+    assert.equal(device.sent.length, 1);
+});
+
+test('every probe says in the log which bits it sent', async () => {
+    // An experiment whose record is "I think I pressed the third one" is not an
+    // experiment.
+    const device = await light({ at: 10 });
+    await request(device, 'lucci_probe_3', true);
+
+    assert.ok(device.logs.some(line => line.includes('PROBE 000011 (3)')), device.logs.join(' | '));
+    assert.ok(device.logs.some(line => line.includes('watch the light')));
+});

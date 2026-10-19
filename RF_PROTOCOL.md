@@ -377,6 +377,59 @@ preamble mismatches confined to the first four positions — that is, to the art
   confirms. It is what makes Homey's asymmetric `onoff` honest: there is no "fan on" code, and
   sending a speed is how the fan is started.
 
+## The discrete on/off experiment
+
+**Running now, and throwaway.** The light has one stateless toggle code and no discrete on or off,
+which is why Homey's `onoff` for it is a belief rather than a fact: it drifts the first time anything
+changes the light that Homey cannot hear — a wall switch, a power cut, a handset press out of range,
+or a toggle the fitting did not receive. No amount of inference fixes that properly. A discrete on
+and a discrete off would.
+
+The command field is six bits, so 64 values, and **three of them are known under the light
+selector**: `000100` toggle, `001000` brighter, `001011` dimmer. The fitting's firmware may well
+answer to on and off codes that no handset button is wired to.
+
+Six are being tried, chosen by the one weak theory available — that a designer numbering light
+commands would put on, off and toggle together — so everything within three of the toggle:
+
+| | | |
+|---|---|---|
+| `000001` (1) | `000010` (2) | `000011` (3) |
+| `000101` (5) | `000110` (6) | `000111` (7) |
+
+**`000000` is deliberately not among them.** An all-zeros command field is the classic sentinel —
+null command, reset, enter-pairing — and it is the single value most likely to do something that
+cannot be undone from the sofa. It is still there to try, with the fitting's recovery procedure to
+hand.
+
+**This is a guess at an address in a space, not a derivation.** The encoding of bits 18-23 is still
+not understood, and the caveat below still holds: a seventeenth command cannot be synthesised, only
+captured. These six are being probed by hand, one at a time, with a person watching the light.
+
+### What it risks
+
+A ceiling fan receiver's command space almost certainly also contains its pairing or learn command,
+and possibly a factory reset. The realistic worst case is the fitting forgetting the handset,
+recovered by whatever physical procedure the fitting has — usually a button on it or a power-cycle
+sequence. **Know where that procedure is before pressing anything.**
+
+### How it is wired, and how to remove it
+
+Six buttons on the light's tile, labelled with the bits they send, each logging the payload and what
+to look for. Everything is marked THROWAWAY:
+
+- [`lib/lucci-probe.js`](lib/lucci-probe.js) — the codes and the frame builder, deliberately in its
+  own module so [`lib/lucci-protocol.js`](lib/lucci-protocol.js) keeps its guarantee of building only
+  the sixteen codes that were recorded.
+- `.homeycompose/capabilities/lucci_probe_*.json` — the six buttons.
+- The `lucci_probe_*` entries in [`drivers/light/driver.compose.json`](drivers/light/driver.compose.json),
+  the block in [`drivers/light/device.js`](drivers/light/device.js) and the marked tests.
+
+### Result
+
+Nothing recorded yet. For each code, what the light did: went on, went off, toggled, changed
+brightness, or nothing — and whether it behaved differently with the light already on.
+
 ## Adding a command
 
 1. **Capture it.** See [`CAPTURE_GUIDE.md`](CAPTURE_GUIDE.md). Press it several times: a button that

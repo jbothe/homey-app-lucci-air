@@ -3,6 +3,8 @@
 const Homey = require('homey');
 const { SIGNAL_ID, ADDRESS_LENGTH, buildFrame, sameAddress } = require('../../lib/lucci-protocol');
 const position = require('../../lib/light-position');
+// THROWAWAY: the discrete on/off experiment. See lib/lucci-probe.js.
+const probe = require('../../lib/lucci-probe');
 
 // Between presses, in milliseconds.
 //
@@ -59,6 +61,13 @@ class LucciLightDevice extends Homey.Device {
         this.registerCapabilityListener('dim', this.onCapabilityDim.bind(this));
         this.registerCapabilityListener('lucci_brighter', () => this.nudge(position.KEY_UP));
         this.registerCapabilityListener('lucci_dimmer', () => this.nudge(position.KEY_DOWN));
+
+        // **THROWAWAY: six buttons for the discrete on/off experiment.**
+        // Delete this block, lib/lucci-probe.js, the six lucci_probe_*
+        // capabilities and their entries in driver.compose.json when it is done.
+        for (const code of probe.PROBE_CODES) {
+            this.registerCapabilityListener(`lucci_probe_${code}`, () => this.sendProbe(code));
+        }
 
         this.onRX = this.onRX.bind(this);
         try {
@@ -283,6 +292,25 @@ class LucciLightDevice extends Homey.Device {
         this.log(`${frame.key} arrived with bit 24 ${frame.bit24} where this device stores`
             + ` ${this.bit24} — so the bit is not constant for one handset, which is`
             + ' the thing RF_PROTOCOL.md says is unknown about it.');
+    }
+
+    // THROWAWAY: transmits one unknown command under the light selector.
+    //
+    // Loud on purpose. The whole value of this is the pairing of a log line with
+    // what the light did a second later, and an experiment whose record is "I
+    // think I pressed the third one" is not an experiment.
+    async sendProbe(code) {
+        const payload = probe.probeFrame(this.address, this.bit24, code);
+        this.log(`PROBE ${probe.probeLabel(code)} -> [${payload.join('')}]`
+            + ' — watch the light: did it go on, go off, toggle, dim, or nothing?');
+
+        try {
+            await this.signal.tx(payload);
+            this.log(`PROBE ${probe.probeLabel(code)} sent`);
+        } catch (err) {
+            this.error(`PROBE ${probe.probeLabel(code)} failed:`, err.message);
+            throw new Error(this.homey.__('errors.tx_failed'));
+        }
     }
 
     onRX(frame, isFirst) {

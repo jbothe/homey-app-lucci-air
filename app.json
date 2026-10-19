@@ -160,7 +160,13 @@
         "onoff",
         "dim",
         "lucci_brighter",
-        "lucci_dimmer"
+        "lucci_dimmer",
+        "lucci_probe_1",
+        "lucci_probe_2",
+        "lucci_probe_3",
+        "lucci_probe_5",
+        "lucci_probe_6",
+        "lucci_probe_7"
       ],
       "capabilitiesOptions": {
         "dim": {
@@ -251,6 +257,84 @@
           }
         }
       ]
+    },
+    "lucci_probe_1": {
+      "type": "boolean",
+      "title": {
+        "en": "Probe 000001",
+        "nl": "Probe 000001",
+        "de": "Probe 000001",
+        "fr": "Probe 000001"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
+    "lucci_probe_2": {
+      "type": "boolean",
+      "title": {
+        "en": "Probe 000010",
+        "nl": "Probe 000010",
+        "de": "Probe 000010",
+        "fr": "Probe 000010"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
+    "lucci_probe_3": {
+      "type": "boolean",
+      "title": {
+        "en": "Probe 000011",
+        "nl": "Probe 000011",
+        "de": "Probe 000011",
+        "fr": "Probe 000011"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
+    "lucci_probe_5": {
+      "type": "boolean",
+      "title": {
+        "en": "Probe 000101",
+        "nl": "Probe 000101",
+        "de": "Probe 000101",
+        "fr": "Probe 000101"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
+    "lucci_probe_6": {
+      "type": "boolean",
+      "title": {
+        "en": "Probe 000110",
+        "nl": "Probe 000110",
+        "de": "Probe 000110",
+        "fr": "Probe 000110"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
+    },
+    "lucci_probe_7": {
+      "type": "boolean",
+      "title": {
+        "en": "Probe 000111",
+        "nl": "Probe 000111",
+        "de": "Probe 000111",
+        "fr": "Probe 000111"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
     },
     "lucci_speed": {
       "type": "enum",
