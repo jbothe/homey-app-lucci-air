@@ -228,8 +228,11 @@ if (paired.length > 0) {
     } else {
         warnings.push(`${differ.length} of ${paired.length} buttons sent something different the`
             + ` second time (${differ.map(x => x.label).join(', ')}) while the rest repeated`
-            + ' themselves. A rolling code would move for every button, so this looks like dirty'
-            + ' captures — record those buttons again');
+            + ' themselves. A rolling code would have moved for every button, so that is not this.'
+            + ' Either those captures are dirty, or those buttons carry a value rather than a'
+            + ' fixed code — a handset that tracks the speed, or the direction, and transmits the'
+            + ' one it is moving to. Press each of them a third time: a dirty capture gives a'
+            + ' third answer, while a value returns to an earlier one when the state does');
     }
 
     const missing = reads.filter(r => !/\(repeat/i.test(r.label)).length - paired.length;
