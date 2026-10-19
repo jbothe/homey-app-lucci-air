@@ -69,8 +69,9 @@ That makes a real `dim` slider workable, on three conditions:
    corrected as the household uses the remote rather than drifting silently. A burst of frames is
    one press; a longer run is a hold, and its duration converts to steps at the same rate.
 3. **A calibrate action can always re-anchor it.** Transmitting well past the full range drives the
-   light to an extreme, where it saturates, and position is then known exactly. Offered as a flow
-   action and as a repair step, so a user who thinks the slider has drifted can fix it in one tap.
+   light to an extreme, where it saturates — confirmed at both ends — and position is then known
+   exactly. Offered as a flow action and as a repair step, so a user who thinks the slider has
+   drifted can fix it in one tap.
 
 Unlike the RC300 lesson — where transmitting longer than the real remote made the receiver register
 one command as two presses — a long transmission here *is* what the handset does on a hold, so
@@ -93,19 +94,31 @@ If the 2.76s hold that was recorded crossed the whole range, then a step is ~1.8
 a full-range move takes 2.76s and a four-step nudge 350ms — a perfectly usable slider. That "if" is
 the one measurement still missing.
 
-### The measurement still outstanding
+### It saturates at both ends, which makes the slider recoverable
 
-One experiment gives both remaining answers: **from maximum, hold the dimmer down and time how long
-until the light stops changing.**
+Confirmed on the hardware: **holding the dimmer at minimum stays at minimum, and holding brighter at
+maximum stays at maximum.** Neither wraps.
 
-- The elapsed time is **T**, and `framesPerStep = (T x 21.4) / 32`.
-- Whether it stops at all answers **saturation**. If holding past the bottom leaves the light at
-  minimum, calibrate works: drive deliberately past the end and position is known exactly. If it
-  instead wraps round to maximum, the slider has no anchor, and it should be dropped in favour of
-  the two buttons rather than shipped as a guess.
+That is worth more to the design than the step rate is, for three reasons:
 
-Until that is measured the app ships the two buttons and no slider, which is a complete and honest
-device on its own.
+- **Overshoot is free.** The app can transmit more than it needs at either end without the light
+  running away, so nothing has to be exact.
+- **Position is always recoverable.** Driving deliberately past an end anchors the estimate: after a
+  generous dim-down the light *is* at step 0, whatever the app previously believed. Calibrate is a
+  flow action and a repair step, and it cannot fail.
+- **0% and 100% are exact without knowing the rate at all.** Those two are just "saturate downward"
+  and "saturate upward". Only intermediate values need a frames-per-step figure.
+
+So the slider degrades gracefully rather than being all-or-nothing, and a drifted estimate is never
+worse than one calibrate away.
+
+### One measurement left, and it only buys the middle
+
+**From maximum, hold the dimmer and time how long until the light stops changing.** That elapsed
+time is **T**, and `framesPerStep = (T x 21.4) / 32`.
+
+Without it the light still ships complete: two exact buttons, and a slider that can reach 0% and
+100% by saturating. With it, every intermediate position becomes targetable too.
 
 ### Dim does nothing while the light is off
 
@@ -195,7 +208,8 @@ Worth stating in the app's own documentation rather than discovering in a suppor
 - **The light's on/off can invert** if its state is changed by something Homey cannot hear — a wall
   switch, a power cut, a second handset. The next toggle then does the opposite of what was asked.
 - **The `dim` slider's position is an estimate**, corrected by what the app overhears and re-anchored
-  by calibrating. The two brightness buttons are exact and need no estimate at all.
+  by calibrating, which works because the light saturates at both ends rather than wrapping. The two
+  brightness buttons, and the slider's 0% and 100%, are exact and need no estimate at all.
 - **Speed, direction and timer survive this**, because every handset press is absolute and received.
 - **Nothing is reported by the fan.** The radio is one-way; everything Homey shows is what it
   commanded or overheard.
