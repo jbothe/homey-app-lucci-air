@@ -215,6 +215,15 @@ Worth stating in the app's own documentation rather than discovering in a suppor
   what the handset did, not by mis-timing a transmission.
 - **A slider move takes seconds**, up to ~18s across the full range. The app reflects the target
   immediately and cancels any move still in flight when a new one arrives.
-- **Speed, direction and timer survive this**, because every handset press is absolute and received.
 - **Nothing is reported by the fan.** The radio is one-way; everything Homey shows is what it
   commanded or overheard.
+- **A restart is where that bites hardest.** On init the capabilities hold what was last commanded,
+  and the app has no way to ask the fan whether it is still true — the handset may have been used
+  while the app was down. Nothing is transmitted on init to force the two into agreement, because
+  that would mean a fan starting itself when Homey restarts. So the first command after a restart
+  may be the one that looks wrong: `onoff` true sends the stored step, which is the step Homey
+  remembers rather than the step the fan is on. The log says as much in those terms rather than
+  claiming to have resumed anything.
+- **Speed, direction and timer converge again** as soon as the handset is used, because every press
+  is absolute and received. The light's `onoff` does not, being a stateless toggle — which is the
+  asymmetry behind the two entries above it.

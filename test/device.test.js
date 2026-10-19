@@ -106,16 +106,24 @@ test('an address of the wrong length is no address at all', async () => {
     assert.equal(fan.unavailable, 'errors.not_paired');
 });
 
-test('onInit says whether it resumed a step or fell back to the default', async () => {
+test('onInit reports the stored step without claiming to have set it', async () => {
     const resumed = await device({ speed: '4' });
-    assert.ok(resumed.logs.some(line => line === 'speed: resumed step 4'), resumed.logs.join(' | '));
     assert.equal(resumed.capabilityValues.lucci_speed, '4');
+    assert.equal(resumed.sent.length, 0, 'onInit must not transmit');
 
     // The distinction the log could not make before: `onoff` true sends this
-    // step, so "resumed what you chose" and "fell back" look identical on air.
+    // step, so "the step you chose" and "the default" look identical on air.
+    const line = resumed.logs.find(l => l.startsWith('speed:'));
+    assert.match(line, /step 4 stored/);
+    // And it must not read as though the fan were set to that step — "resumed
+    // step 1" was the first wording and it did read that way.
+    assert.doesNotMatch(line, /resumed/);
+    assert.match(line, /nothing sent/);
+
     const fresh = await device();
-    assert.ok(fresh.logs.some(line => line.startsWith('speed: none stored')), fresh.logs.join(' | '));
+    assert.match(fresh.logs.find(l => l.startsWith('speed:')), /none stored/);
     assert.equal(fresh.capabilityValues.lucci_speed, '2');
+    assert.equal(fresh.sent.length, 0, 'onInit must not transmit');
 });
 
 test('both capabilities share one debounced listener', async () => {

@@ -37,13 +37,20 @@ class LucciFanDevice extends Homey.Device {
 
         // So the tile always offers a speed, and `onoff` always has one to send.
         // Which of the two happened is logged, because `onoff` true sends this
-        // step and the log otherwise cannot tell "resumed what you last chose"
-        // from "fell back to the default" — the difference a user would notice.
+        // step and the log otherwise cannot tell "the step you last chose" from
+        // "the default, because nothing was stored" — a difference a user would
+        // notice and the radio cannot show.
+        //
+        // Nothing is transmitted here, and the wording says so. "Resumed step 1"
+        // was the first attempt and it misread as the fan having been set to
+        // step 1; all this does is read back a stored number. What the fan is
+        // actually doing at this moment is unknown — the radio is one way, and
+        // the handset may have been used while the app was down.
         const stored = this.getCapabilityValue('lucci_speed');
         if (FAN_SPEEDS.includes(stored)) {
-            this.log(`speed: resumed step ${stored}`);
+            this.log(`speed: step ${stored} stored; nothing sent, this is what onoff true would send`);
         } else {
-            this.log(`speed: none stored (${JSON.stringify(stored)}), starting at step ${DEFAULT_SPEED}`);
+            this.log(`speed: none stored (${JSON.stringify(stored)}); onoff true would send step ${DEFAULT_SPEED}`);
             await this.set('lucci_speed', DEFAULT_SPEED);
         }
 
