@@ -205,6 +205,15 @@ against itself.
    they carry the same address: they are ignored, and said once, since the light being audible is
    step 6's premise.
 
+   **Whether Homey hears its own transmissions is not yet known, and it matters most to the light.**
+   RX is now on for the life of the device rather than only during pairing, so if the receiver picks
+   up what the transmitter just sent, every command comes back as a received frame. For the fan that
+   is harmless — the mirrored value is the one just commanded, and every fan command is absolute —
+   but for the light's relative brighter and dimmer it would double-count every press and send the
+   `dim` estimate off by a factor of two. The hardware test settles it in one line: an `rx` entry
+   immediately after each `tx` means self-reception, and step 6 then has to ignore frames it can
+   attribute to its own transmission.
+
    Pairing now **prefers a full-length frame** over a reconstructed one, holding a 24-symbol
    candidate 750ms for a 25-symbol frame before settling for it. Pairing is the one caller that
    cannot check an address after the fact — it is what establishes the address — and under the
@@ -212,7 +221,10 @@ against itself.
    requirement, because a receiver that only ever delivered 24 symbols would otherwise be
    impossible to pair.
 6. **Light driver**: `onoff` and the two brightness buttons first — they need no state and no
-   timings. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
+   timings. Two things carry over from step 5 and must not be inherited by accident: the fan's
+   2-second repeat-collapsing window is safe only for absolute commands and would silently drop
+   steps here, and if the fan's first hardware test shows Homey hearing its own frames, the light
+   has to ignore its own transmissions or its `dim` estimate will count every press twice. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
    and a calibrate action.
 7. **Flow cards**, store assets, README and locales.
 
