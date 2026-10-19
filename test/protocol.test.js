@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const {
     ADDRESS_LENGTH, HEAD_LENGTH, FRAME_LENGTH, RX_FRAME_LENGTH,
     COMMANDS, COMMAND_KEYS, FAN_SPEEDS, FAN_DIRECTIONS, FAN_TIMERS,
-    evenParity, buildFrame, identifyFrame, describeFrame, sameAddress,
+    evenParity, completeFrame, buildFrame, identifyFrame, describeFrame, sameAddress,
 } = require('../lib/lucci-protocol');
 
 // captures.test.js holds the table against the recordings. This file covers
@@ -91,20 +91,64 @@ test('identifyFrame names the field as well as the command', () => {
     });
 });
 
-test('a 24-symbol frame is identified, its parity never having arrived', () => {
-    // Insurance, not an observation: this handset does transmit the last bit's
-    // gap, so Homey ought to deliver 25. The sibling Bear handset does not, and
-    // there requiring the full length made the app completely deaf while
-    // looking like a radio fault. Nothing is lost by accepting 24, because the
-    // parity bit is recomputed on transmit rather than carried over.
+// The frame Homey's receiver actually delivered, taken from the log of the first
+// time this app ever heard the handset. The press was Fan Off, from the handset
+// the recordings came from, and it arrived one symbol short of the FRONT —
+// 38ms before a full 25-symbol frame of the same press.
+//
+// It is here because it is the one payload in this file that no part of this app
+// produced. It was also what found the bug it now guards: the 24-symbol
+// allowance was written for the sibling Bear handset's receiver, which drops the
+// TRAILING bit, so this frame was read as a light command that does not exist
+// and logged as unrecognised.
+const FROM_THE_RADIO = '101110011110011101010100'.split('').map(Number);
+
+test('the frame the radio actually delivered reads as the button that was pressed', () => {
+    assert.equal(FROM_THE_RADIO.length, RX_FRAME_LENGTH);
+
+    const found = identifyFrame(FROM_THE_RADIO);
+    assert.notEqual(found, null, 'the payload observed on air does not identify');
+    assert.equal(found.key, 'fan.off');
+    assert.deepEqual(found.address, HANDSET, 'the restored bit is address bit 0');
+
+    // The restored frame is bit-for-bit the frame the app would transmit for
+    // that button — which is the strongest statement available that the leading
+    // bit was recovered correctly rather than merely plausibly.
+    assert.deepEqual(completeFrame(FROM_THE_RADIO), buildFrame(HANDSET, 'fan.off'));
+    assert.match(describeFrame(FROM_THE_RADIO), /^fan\.off \(24 symbols, one restored\)/);
+});
+
+test('a leading bit lost off any command is recovered from parity', () => {
+    // Generalising the frame above, and over an odd-weight address too, where
+    // the recovery depends on bit 24 really being parity. On such a handset the
+    // constant-zero rule would restore the wrong bit — and that frame then fails
+    // sameAddress and is ignored, rather than acted on as someone else's.
     for (const key of COMMAND_KEYS) {
-        const short = buildFrame(ODD, key).slice(0, RX_FRAME_LENGTH);
-        assert.equal(short.length, 24);
+        for (const address of [HANDSET, ODD]) {
+            const whole = buildFrame(address, key);
+            const found = identifyFrame(whole.slice(1));
+
+            assert.notEqual(found, null, `${key} did not identify with its leading bit lost`);
+            assert.equal(found.key, key);
+            assert.deepEqual(found.address, address, `${key} lost its address bit 0`);
+            assert.deepEqual(completeFrame(whole.slice(1)), whole);
+        }
+    }
+});
+
+test('a trailing bit lost is recovered too, as the sibling handset needs', () => {
+    // Kept as insurance rather than as an observation: this receiver truncates
+    // at the front, the Bear one at the back. Nothing is lost by reading both,
+    // and requiring the full length there made that app completely deaf while
+    // looking like a radio fault.
+    for (const key of COMMAND_KEYS) {
+        const whole = buildFrame(ODD, key);
+        const short = whole.slice(0, RX_FRAME_LENGTH);
 
         const found = identifyFrame(short);
-        assert.notEqual(found, null, `${key} did not identify at 24 symbols`);
+        assert.notEqual(found, null, `${key} did not identify with its trailing bit lost`);
         assert.equal(found.key, key);
-        assert.deepEqual(buildFrame(found.address, found.key), buildFrame(ODD, key));
+        assert.deepEqual(buildFrame(found.address, found.key), whole);
     }
 });
 
@@ -130,9 +174,13 @@ test('a frame whose parity is wrong is reported, not rejected', () => {
 });
 
 test('an unrelated 433 MHz frame is not mistaken for the handset', () => {
-    // This is what stops pairing latching onto whatever else is in range: the
-    // length, the selector and the command tail all have to fit.
-    const selector = bits => [...HANDSET, ...bits, 0, 0, 0, 1, 0, 0];
+    // The length, the selector and the command tail all have to fit. These are
+    // full-length frames, which are read exactly as they arrive — see the test
+    // below for how much weaker this gets at 24 symbols.
+    const frame = (selector, command) => {
+        const head = [...HANDSET, ...selector, ...command];
+        return [...head, evenParity(head)];
+    };
     const wrongLength = buildFrame(HANDSET, 'fan.off').slice(0, 20);
 
     for (const payload of [null, undefined, 'fan.off', [], wrongLength]) {
@@ -140,19 +188,42 @@ test('an unrelated 433 MHz frame is not mistaken for the handset', () => {
     }
 
     // 00 and 11 were never seen, and a frame carrying either is not ours.
-    for (const bits of [[0, 0], [1, 1]]) {
-        assert.equal(identifyFrame(selector(bits)), null);
-        assert.match(describeFrame(selector(bits)), /neither fan \(10\) nor light \(01\)/);
+    for (const selector of [[0, 0], [1, 1]]) {
+        const bad = frame(selector, [0, 0, 0, 1, 0, 0]);
+        assert.equal(identifyFrame(bad), null);
+        assert.match(describeFrame(bad), /neither fan \(10\) nor light \(01\)/);
     }
 
     // A selector we know with a command we do not: the seventeenth button,
     // which cannot be synthesised and so cannot be sent either.
-    const unknown = [...HANDSET, 1, 0, 1, 1, 1, 1, 1, 1];
+    const unknown = frame([1, 0], [1, 1, 1, 1, 1, 1]);
     assert.equal(identifyFrame(unknown), null);
     assert.match(describeFrame(unknown), /fan, unimplemented command 111111/);
 
-    assert.equal(describeFrame([...HANDSET, 1, 0, 2, 0, 0, 0, 0, 0]), 'not bits');
+    assert.equal(describeFrame([...HANDSET, 1, 0, 2, 0, 0, 0, 0, 0, 0]), 'not bits');
     assert.match(describeFrame(wrongLength), /20 symbols, expected 24 or 25/);
+});
+
+test('a 24-symbol frame is read by shifting, which discriminates less', () => {
+    // Worth stating rather than discovering. A short frame has to be completed
+    // before it can be read, and both completions are tried, so two 8-bit
+    // windows are each held against the sixteen known tails instead of one.
+    // Some bit patterns that are not ours therefore read as ours — this one is a
+    // selector of 00, which at full length is rejected outright.
+    const notOurs = [...HANDSET, 0, 0, 0, 0, 0, 1, 0, 0];
+    assert.equal(notOurs.length, RX_FRAME_LENGTH);
+
+    const found = identifyFrame(notOurs);
+    assert.notEqual(found, null, 'shifts into a valid frame');
+    assert.equal(found.key, 'fan.speed.1');
+    // And into a different address, which is what actually protects a paired
+    // device: sameAddress rejects it.
+    assert.equal(sameAddress(found.address, HANDSET), false);
+
+    // What keeps this from mattering is upstream of the bits: a payload reaches
+    // identifyFrame at all only after matching the signal's preamble, both
+    // symbol windows at 0.2 tolerance, the interval and the length. The bit
+    // check is the last filter, not the only one.
 });
 
 test('buildFrame refuses what it cannot build rather than sending nonsense', () => {

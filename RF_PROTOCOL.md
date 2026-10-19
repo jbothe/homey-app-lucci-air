@@ -164,8 +164,12 @@ with an odd-weight address would need bit 24 set. **Compute it as even parity.**
 that yields `0` for every command — bit-for-bit what was recorded, so it costs nothing here — and
 it is far more likely to be right elsewhere than hardcoding zero.
 
-**On receive the bit is reported rather than enforced**, which is the asymmetry that keeps the
-choice from mattering. An odd-weight handset is the one place the two candidates differ, so
+**It is also what recovers a dropped leading bit**, which is the second and stronger argument for
+computing it: see "Receiving" below. Under the constant-zero rule that recovery would be wrong on an
+odd-weight address, and the frame would be rejected by the device rather than acted on.
+
+**On receive the bit is otherwise reported rather than enforced**, which is the asymmetry that keeps
+the choice from mattering. An odd-weight handset is the one place the two candidates differ, so
 rejecting a mismatch would make exactly that handset impossible to pair, and would say so as
 "couldn't find your handset". Accepting it keeps the app working whichever rule holds, and the
 driver's log line is the one piece of evidence that would settle the question: a received frame
@@ -200,11 +204,42 @@ sounds safely permissive can make the alphabet ambiguous:
 `0.2` is the middle of the usable run — as far as possible from rejecting a handset whose timing
 differs from this one, and from the symbols becoming undecidable.
 
-**4. `minimalLength` allows 24 symbols as well as 25.** Unlike the Bear handset, this one does
-transmit the last bit's gap before the silence, so Homey ought to deliver all 25. The allowance is
-insurance: if it ever closes only 24 words, requiring 25 would make the app completely deaf while
-looking like a radio problem, whereas accepting 24 costs nothing — the address and command are
-checked separately.
+**4. `minimalLength` allows 24 symbols as well as 25.** This was written as insurance against the
+Bear handset's behaviour, where the receiver never closes the final word and drops it. **The radio
+then showed that it is not insurance at all, and that the truncation is at the other end.**
+
+The first time the app heard the handset, one press of Fan Off arrived as two frames 38ms apart: a
+24-symbol one, then a full 25-symbol one. The short one was the real frame **minus its leading
+bit** —
+
+```
+sent      0101110011110011 10 101010 0
+delivered  101110011110011101010100
+```
+
+— which is the receiver's gain settling at the start of a burst, the same artefact the recorder
+shows in the first few preamble positions. Read as though the *trailing* bit were missing, those 24
+symbols decode as selector `01` and command `010100`: a light button that does not exist. That is
+exactly what the driver's unrecognised-frame log reported, and it is what the log line is for.
+
+**A dropped leading bit is exactly recoverable from the parity bit.** With `F` the real frame and
+`R` what arrived, `R = F[1..24]`, so `R[23]` is parity and
+
+```
+F[0] = R[23] XOR (R[0] XOR ... XOR R[22])
+```
+
+Verified against the frame above: it restores address bit `0`, and the completed frame is
+bit-for-bit what the app transmits for that button. Both readings are tried, the leading one first
+because it is the one observed here.
+
+The cost is that 24 symbols discriminate less than 25, since two 8-bit windows are each held against
+the sixteen known tails rather than one. A pattern that is not ours can shift into one that is — but
+it reaches the bit check only after matching the preamble, both symbol windows at 0.2 tolerance, the
+interval and the length, and a frame carrying the wrong address is then rejected by the device. The
+one place it is not is pairing, which keeps whatever address the first recognised frame carries. In
+practice the full-length frame arrives within 40ms of the press, so pairing could be made to prefer
+one; it has not been, and this is the reason it might be.
 
 ## Addressing and pairing
 
