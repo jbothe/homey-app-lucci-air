@@ -11,18 +11,19 @@ needs no hub, no bridge and no account:
 
 ## Status
 
-**The protocol is settled, and the app transmits nothing yet.**
-
-The fan driver and the pairing flow are written, but no frame has ever been put on air: every code
-here comes from listening to the handset. The first hardware test is the next step, and the first
-real risk — see [`APP_PLAN.md`](APP_PLAN.md) for what to try if the fan does not respond.
+**It drives a real fan.** Homey paired off the handset and three speed commands each moved the fan,
+first attempt — so the protocol is no longer a hypothesis.
 
 | | |
 |---|---|
 | protocol, frame building, identification | [`lib/lucci-protocol.js`](lib/lucci-protocol.js) |
-| fan driver — `onoff` and speed, transmit only | [`drivers/fan/`](drivers/fan) |
+| fan driver — `onoff` and speed, **confirmed on the hardware** | [`drivers/fan/`](drivers/fan) |
 | pairing — learns the address off your own handset | [`drivers/fan/pair/learn.html`](drivers/fan/pair/learn.html) |
-| still to come | direction, timer, receiving, the light, flow cards |
+| still to come | direction, timer, state mirroring, the light, flow cards |
+
+The off code, direction, the timer and the light are built from the same tables but have not been
+sent yet. Receiving works too, which is how the receiver's habit of dropping a burst's first bit
+turned up — see "Receiving" in [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
 
 - [`RF_PROTOCOL.md`](RF_PROTOCOL.md) — the frame layout, all sixteen command codes, and what each
   control does. Reverse-engineered from 33 recordings covering every button.

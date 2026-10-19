@@ -162,11 +162,13 @@ against itself.
    recordings.
 2. **App scaffold** — `.homeycompose/app.json`, the signal definition (already written), locales,
    capabilities.
-3. **Fan driver, transmit only**: `onoff` and `lucci_speed`, with the learn pair step.
-   **This is the first milestone that touches the radio, and the first real risk.** Nothing has been
-   transmitted yet. If the fan does not respond, the things to try in order are: the complemented
-   form of the payload, `repetitions` nearer the handset's exact burst, and the preamble as measured
-   per-position rather than uniform.
+3. **Fan driver, transmit only**: `onoff` and `lucci_speed`, with the learn pair step. **Done, and
+   the fan responded on the first attempt** — no complemented payload, no preamble adjustment, no
+   change to `repetitions`, all of which were the contingencies. Three speed commands each moved the
+   fan one step and none of them double-stepped, so 9 repetitions is right for this receiver as well
+   as for the handset. Receiving also works, which was not being tested: a frame arrived and
+   decoded on the first run, and it is what found the leading-bit truncation now handled in
+   `completeFrame`.
 4. **Direction and timer** on the fan.
 5. **Receiving**, and state mirroring from the handset.
 6. **Light driver**: `onoff` and the two brightness buttons first — they need no state and no

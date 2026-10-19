@@ -8,8 +8,10 @@ This is a working hypothesis, not a manufacturer specification. Treat the struct
 guide for decoding further commands, and the caveats as the list of things one handset cannot
 settle.
 
-Nothing here has been transmitted yet. The signal definition reproduces the recordings, which is
-the strongest check available without a radio; it is not the same as a fan responding.
+**The fan has now answered.** Homey paired off this handset, and three speed codes built from the
+tables below each moved the fan — so the frame layout, the address, the symbol alphabet and the
+absolute speed ladder are confirmed on the hardware, not merely consistent with the recordings. The
+off code, direction, the timer and the light have still only been listened to; see the caveats.
 
 ## Frame layout
 
@@ -290,7 +292,11 @@ preamble mismatches confined to the first four positions — that is, to the art
 - **"Up at maximum" rests on one clean frame.** It repeats step 5, so the ladder appears to top out
   rather than wrap, but that is the weakest claim here. It does not affect the app, which never
   needs to send a relative step.
-- **The fan was never commanded.** Everything is from listening.
+- **Only the speed codes have been sent.** Pairing and three speed commands are confirmed on the
+  hardware, which settles the layout, the address, the alphabet and the speed ladder. The off code,
+  the two direction codes, the four timer codes and all three light codes are still only observed:
+  they are built the same way from the same tables, which is good reason to expect them to work and
+  not evidence that they do.
 
 ## Adding a command
 
