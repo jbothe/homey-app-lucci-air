@@ -438,3 +438,48 @@ test('every press of a long move carries the learned bit', async () => {
     assert.ok(device.sent.length > 10, `only ${device.sent.length} presses`);
     for (const payload of device.sent) assert.equal(payload[24], 1);
 });
+
+test('two presses in a row stay in step without Homey writing between them', async () => {
+    // **The failure the idempotence check did not fix, and caused.**
+    //
+    // Homey writes a requested capability value when the listener resolves, not
+    // before it runs — the same ordering that makes reflect() necessary. So the
+    // second of two quick presses used to compare itself against the value from
+    // before the first one, conclude the light was already where it was being
+    // asked to go, and send nothing. One toggle for two presses, and Homey left
+    // believing the opposite of what the light was doing.
+    //
+    // No capability writes here at all: that is the point. This is what the
+    // listener sees when presses arrive faster than Homey's own bookkeeping.
+    const device = await light({ on: true, at: 10 });
+
+    await device.listeners.onoff(false, {});
+    await device.listeners.onoff(true, {});
+    await new Promise(resolve => setTimeout(resolve, 1));
+
+    assert.deepEqual(keysSent(device), ['light.onoff', 'light.onoff'],
+        'the second press was swallowed, so the light ended up inverted');
+});
+
+test('a run of presses sends one toggle each, however fast', async () => {
+    const device = await light({ on: false, at: 10 });
+
+    for (const value of [true, false, true, false, true]) {
+        await device.listeners.onoff(value, {});
+    }
+    await new Promise(resolve => setTimeout(resolve, 1));
+
+    assert.equal(counted(device, 'light.onoff'), 5);
+});
+
+test('a repeated request still sends nothing, even back to back', async () => {
+    // Idempotence has to survive the fix: asking twice for the state it is
+    // already in is still one change, or none.
+    const device = await light({ on: false, at: 10 });
+
+    await device.listeners.onoff(true, {});
+    await device.listeners.onoff(true, {});
+    await new Promise(resolve => setTimeout(resolve, 1));
+
+    assert.equal(counted(device, 'light.onoff'), 1, 'asking for on twice toggled it twice');
+});

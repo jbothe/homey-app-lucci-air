@@ -418,9 +418,14 @@ upstream of it.
 Three things follow, and the app does all three:
 
 1. **`onoff` is idempotent against what Homey believes**, and transmits only when the belief has to
-   change. "Turn it on" twice turns it on once, which is what `onoff` means everywhere else. This
-   also fixes a real fault: Homey can deliver two fast presses of the tile as a single listener call
-   carrying the net value, which used to send one toggle and leave Homey and the light inverted.
+   change. "Turn it on" twice turns it on once, which is what `onoff` means everywhere else.
+
+   Comparing against the belief correctly is the subtle part, and took two attempts. **Inside a
+   listener the capability is stale**: Homey writes a requested value when the listener resolves,
+   not before it runs. So reading `onoff` there gave the value from before the current press, and
+   two quick presses sent one toggle between them — the second concluded the light was already
+   where it was being asked to go. The belief is now a field, committed before anything is awaited,
+   and the capability is its display. The same ordering is why `reflect` exists.
 2. **A toggle button sits beside it**, sending one toggle per press and claiming nothing. A press is
    an event, so it cannot be collapsed by value the way a state change can, and it is correct
    however the light got to where it is. It is the way out when the belief has drifted: press until

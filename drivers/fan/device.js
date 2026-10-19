@@ -77,7 +77,17 @@ class LucciFanDevice extends Homey.Device {
         // step 1; all this does is read back a stored number. What the fan is
         // actually doing at this moment is unknown — the radio is one way, and
         // the handset may have been used while the app was down.
+        // What the fan is believed to be doing. **Held here rather than read
+        // back from the capability**, because inside a listener the capability
+        // is stale — Homey writes a requested value when the listener resolves,
+        // not before it runs. On the light that staleness swallowed the second
+        // of two quick presses; here it is narrower, since every fan command is
+        // absolute and the next one puts it right, but it is the same bug and
+        // there is no reason to keep one instance of it.
+        this.on = this.getCapabilityValue('onoff') === true;
+
         const stored = this.getCapabilityValue('lucci_speed');
+        this.step = FAN_SPEEDS.includes(stored) ? stored : DEFAULT_SPEED;
         if (FAN_SPEEDS.includes(stored)) {
             this.log(`speed: step ${stored} stored; nothing sent, this is what onoff true would send`);
         } else {
@@ -119,6 +129,7 @@ class LucciFanDevice extends Homey.Device {
         // rather than a fact. The next speed command or overheard press fixes
         // it, which is the best available and worth knowing about.
         this.registerCapabilityListener('lucci_direction', async value => {
+            this.on = true;
             await this.send(`fan.direction.${value}`, 'lucci_direction');
             reflect(this, { onoff: true }, { lucci_direction: value });
         });
@@ -134,7 +145,7 @@ class LucciFanDevice extends Homey.Device {
             // just gone out to a fan that was stopped, which is the experiment.
             // Cheaper than remembering to run it on purpose, and it will fire
             // the first time anyone happens to do this.
-            if (this.getCapabilityValue('onoff') !== true) {
+            if (!this.on) {
                 this.log('timer sent while the fan was off — did the fan start?'
                     + ' If it did, lucci_timer should imply onoff true the way lucci_direction does.'
                     + ' Open question in RF_PROTOCOL.md under Caveats.');
@@ -218,14 +229,19 @@ class LucciFanDevice extends Homey.Device {
         // capabilities: a flow asking for off and a speed in one go means off,
         // and the speed is kept for whenever the fan is next turned on.
         if (values.onoff === false) {
+            this.on = false;
             await this.send('fan.off', 'onoff false');
             return;
         }
 
         const asked = values.lucci_speed;
-        const stored = this.getCapabilityValue('lucci_speed');
-        const step = [asked, stored, DEFAULT_SPEED].find(v => FAN_SPEEDS.includes(v));
+        const step = [asked, this.step, DEFAULT_SPEED].find(v => FAN_SPEEDS.includes(v));
         const why = asked === undefined ? `onoff true, stored step ${step}` : 'lucci_speed';
+
+        // Committed before anything is awaited, so a request arriving while
+        // this one is in flight sees the new belief rather than the old one.
+        this.on = true;
+        this.step = step;
 
         await this.send(`fan.speed.${step}`, why);
 
@@ -307,10 +323,13 @@ class LucciFanDevice extends Homey.Device {
     async mirror(frame) {
         switch (frame.command) {
             case 'off':
+                this.on = false;
                 await this.set('onoff', false);
                 break;
             case 'speed':
                 // A speed code starts the fan, so hearing one means both.
+                this.on = true;
+                this.step = frame.value;
                 await this.set('lucci_speed', frame.value);
                 await this.set('onoff', true);
                 break;

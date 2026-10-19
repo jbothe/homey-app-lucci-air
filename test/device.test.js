@@ -481,3 +481,37 @@ test('an agreeing bit 24 says nothing at all', async () => {
     assert.equal(fan.logs.filter(line => line.includes('arrived with bit 24')).length, 0);
     assert.equal(fan.capabilityValues.lucci_speed, '4');
 });
+
+test('two requests in a row see each other, without Homey writing between', async () => {
+    // The light's bug, in the fan's narrower form: inside a listener the
+    // capability holds the value from before the request, so a second request
+    // arriving first used to read a stale speed and send the wrong one. Absolute
+    // commands mean the next press puts it right, which is why it was never
+    // noticed here — not a reason to keep it.
+    const fan = await device({ speed: '1', onoff: false });
+
+    await fan.multiListener.listener({ lucci_speed: '4' }, {});
+    await fan.multiListener.listener({ onoff: true }, {});
+    await new Promise(resolve => setTimeout(resolve, 1));
+
+    // The second request asked for "on", which sends the stored step — and the
+    // step stored a moment earlier was 4, not the 1 the capability still held.
+    assert.deepEqual(keysSent(fan), ['fan.speed.4', 'fan.speed.4']);
+});
+
+test('the fan tracks what it believes, not what the capability has caught up to', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+
+    await request(fan, { lucci_speed: '5' });
+    assert.equal(fan.step, '5');
+    assert.equal(fan.on, true);
+
+    await request(fan, { onoff: false });
+    assert.equal(fan.on, false);
+    assert.equal(fan.step, '5', 'the step is still remembered for the next on');
+
+    // And an overheard press moves the belief, not just the tile.
+    await receive(fan, buildFrame(ADDRESS, 'fan.speed.0', 0));
+    assert.equal(fan.step, '0');
+    assert.equal(fan.on, true);
+});

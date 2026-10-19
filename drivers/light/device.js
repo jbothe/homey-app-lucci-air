@@ -31,6 +31,18 @@ class LucciLightDevice extends Homey.Device {
             return;
         }
 
+        // Whether the light is believed to be lit.
+        //
+        // **Held here rather than read back from the capability**, because
+        // inside a listener the capability is stale: Homey writes a requested
+        // value when the listener resolves, not before it runs. Reading it there
+        // made the second of two quick presses compare itself against the value
+        // from before the first, conclude there was nothing to do, and send
+        // nothing — one toggle for two presses, and Homey left believing the
+        // opposite of what the light was doing. The capability is this field's
+        // display; this field is what the code decides on.
+        this.lit = this.getCapabilityValue('onoff') === true;
+
         // Where the light is believed to be, as a step, or null for "no idea".
         //
         // Kept in the store rather than read back off `dim`, because `dim` is
@@ -121,17 +133,23 @@ class LucciLightDevice extends Homey.Device {
     // installed behind make unavoidable — see APP_PLAN.md under Known state
     // drift.
     async onCapabilityOnOff(value) {
-        const believed = this.getCapabilityValue('onoff') === true;
+        const believed = this.lit;
         if (value === believed) {
             this.log(`onoff ${value}: already believed to be ${value ? 'on' : 'off'}; nothing sent`);
             return;
         }
+
+        // Committed before anything is awaited, so a press arriving while this
+        // one is still in flight sees the new belief rather than the old one.
+        this.lit = value;
 
         // A move still going would be transmitting brightness codes at a light
         // that is about to be switched, and those are ignored while it is off.
         this.cancelMove(`onoff ${value}`);
 
         if (!await this.send('light.onoff', `onoff ${value}`)) {
+            // The belief goes back: nothing reached the light.
+            this.lit = believed;
             throw new Error(this.homey.__('errors.tx_failed'));
         }
         this.log(`tx light.onoff (${believed ? 'on' : 'off'} -> ${value ? 'on' : 'off'})`);
@@ -145,18 +163,19 @@ class LucciLightDevice extends Homey.Device {
     // the way out when the belief behind `onoff` has drifted — press it until
     // the light is doing what you want, and Homey follows along.
     async onCapabilityToggle() {
+        const believed = this.lit;
+        this.lit = !believed;
         this.cancelMove('toggle');
 
         if (!await this.send('light.onoff', 'toggle')) {
+            this.lit = believed;
             throw new Error(this.homey.__('errors.tx_failed'));
         }
-
-        const believed = this.getCapabilityValue('onoff') === true;
-        this.log(`tx light.onoff (toggle; ${believed ? 'on' : 'off'} -> ${believed ? 'off' : 'on'})`);
+        this.log(`tx light.onoff (toggle; ${believed ? 'on' : 'off'} -> ${this.lit ? 'on' : 'off'})`);
 
         // Deferred, because this is a write from inside a listener for another
         // capability — the trap that cost a round trip once already.
-        reflect(this, { onoff: !believed });
+        reflect(this, { onoff: this.lit });
     }
 
     // One press, one step, and nothing to remember. The honest core of the
@@ -304,7 +323,7 @@ class LucciLightDevice extends Homey.Device {
     // hardware. A no-op with a line in the log beats a silent failure, and beats
     // throwing at a user who pressed a button that looks available.
     isOn(what) {
-        if (this.getCapabilityValue('onoff') === true) return true;
+        if (this.lit) return true;
         this.log(`ignored ${what}: the light is off, and brightness codes do nothing until it is on`);
         return false;
     }
@@ -356,9 +375,10 @@ class LucciLightDevice extends Homey.Device {
         if (frame.command === 'onoff') {
             // Stateless: the handset toggled it, so whatever Homey believed,
             // the opposite is now true.
-            const was = this.getCapabilityValue('onoff') === true;
-            await this.set('onoff', !was);
-            this.log(`rx light.onoff from the handset; now ${!was ? 'on' : 'off'}`);
+            const was = this.lit;
+            this.lit = !was;
+            await this.set('onoff', this.lit);
+            this.log(`rx light.onoff from the handset; now ${this.lit ? 'on' : 'off'}`);
             return;
         }
 

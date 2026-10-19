@@ -272,8 +272,12 @@ Worth stating in the app's own documentation rather than discovering in a suppor
   fitting unpowered every command Homey sends does nothing, with no error and nothing to detect, so
   Homey cannot know whether the light is lit or whether the fitting is even listening. Three things
   follow. `onoff` is idempotent against the belief and transmits only when the belief must change,
-  which is what `onoff` means everywhere and which also fixes two fast tile presses arriving as one
-  listener call — that used to send a single toggle and invert the two. A `lucci_toggle` button sits
+  which is what `onoff` means everywhere. Making that comparison correctly took two goes: the belief
+  has to be held in a field and committed before anything is awaited, because **inside a listener
+  the capability is stale** — Homey writes a requested value when the listener resolves, not before
+  it runs, so the second of two quick presses compared itself against the value from before the
+  first and sent nothing. Both devices now decide on fields and treat the capabilities as their
+  display. A `lucci_toggle` button sits
   beside it, one toggle per press and no claim about the result, which is the way out when the
   belief has drifted. And what the handset does is overheard and believed, a received frame being
   evidence where a stored belief is not.
