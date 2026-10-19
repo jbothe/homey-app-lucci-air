@@ -377,58 +377,56 @@ preamble mismatches confined to the first four positions — that is, to the art
   confirms. It is what makes Homey's asymmetric `onoff` honest: there is no "fan on" code, and
   sending a speed is how the fan is started.
 
-## The discrete on/off experiment
+## The discrete on/off experiment: answered, and the answer is no
 
-**Running now, and throwaway.** The light has one stateless toggle code and no discrete on or off,
-which is why Homey's `onoff` for it is a belief rather than a fact: it drifts the first time anything
-changes the light that Homey cannot hear — a wall switch, a power cut, a handset press out of range,
-or a toggle the fitting did not receive. No amount of inference fixes that properly. A discrete on
-and a discrete off would.
+The light has one stateless toggle code and no discrete on or off, which is why Homey's `onoff` for
+it is a belief rather than a fact. A discrete on and a discrete off would have fixed that properly,
+and the fitting's firmware might have answered to codes no handset button is wired to — three of the
+command field's 64 values are known under the light selector, leaving 61 unexplored.
 
-The command field is six bits, so 64 values, and **three of them are known under the light
-selector**: `000100` toggle, `001000` brighter, `001011` dimmer. The fitting's firmware may well
-answer to on and off codes that no handset button is wired to.
+**Six were tried and none of them did anything.** Everything within three of the toggle at `000100`,
+on the one weak theory available — that a designer numbering light commands would put on, off and
+toggle together:
 
-Six are being tried, chosen by the one weak theory available — that a designer numbering light
-commands would put on, off and toggle together — so everything within three of the toggle:
+| | | | | | |
+|---|---|---|---|---|---|
+| `000001` | `000010` | `000011` | `000101` | `000110` | `000111` |
 
-| | | |
-|---|---|---|
-| `000001` (1) | `000010` (2) | `000011` (3) |
-| `000101` (5) | `000110` (6) | `000111` (7) |
+No response from the light, on or off. So the theory is wrong, or the codes are elsewhere, or there
+are none. `000000` was deliberately not tried: an all-zeros command field is the classic sentinel —
+null command, reset, enter-pairing — and the single value most likely to do something that cannot be
+undone from the sofa.
 
-**`000000` is deliberately not among them.** An all-zeros command field is the classic sentinel —
-null command, reset, enter-pairing — and it is the single value most likely to do something that
-cannot be undone from the sofa. It is still there to try, with the fitting's recovery procedure to
-hand.
+**What this cost and what it bought.** It cost six button presses and told us six of 61 values are
+inert, which is not much. The remaining 55 are a different proposition: a ceiling fan receiver's
+command space almost certainly contains its pairing or learn command and possibly a factory reset,
+so sweeping it risks the fitting forgetting the handset. That is recoverable — the fitting has a
+physical procedure — but it is no longer a cheap experiment, and the apparatus has been removed.
 
-**This is a guess at an address in a space, not a derivation.** The encoding of bits 18-23 is still
-not understood, and the caveat below still holds: a seventeenth command cannot be synthesised, only
-captured. These six are being probed by hand, one at a time, with a person watching the light.
+The honest alternative is in place instead: see "Why on/off cannot be trusted" below.
 
-### What it risks
+## Why on/off cannot be trusted
 
-A ceiling fan receiver's command space almost certainly also contains its pairing or learn command,
-and possibly a factory reset. The realistic worst case is the fitting forgetting the handset,
-recovered by whatever physical procedure the fitting has — usually a button on it or a power-cycle
-sequence. **Know where that procedure is before pressing anything.**
+Worth stating as a property of the installation rather than a defect of the app.
 
-### How it is wired, and how to remove it
+**These fans are installed behind wall switches.** So the fitting can be unpowered, and then every
+command Homey sends does nothing at all — no error, no feedback, nothing to detect. Homey cannot
+know whether the light is lit, whether it is off, or whether the fitting is even listening. No
+amount of inference closes that, because the radio is one way and the thing that broke the link is
+upstream of it.
 
-Six buttons on the light's tile, labelled with the bits they send, each logging the payload and what
-to look for. Everything is marked THROWAWAY:
+Three things follow, and the app does all three:
 
-- [`lib/lucci-probe.js`](lib/lucci-probe.js) — the codes and the frame builder, deliberately in its
-  own module so [`lib/lucci-protocol.js`](lib/lucci-protocol.js) keeps its guarantee of building only
-  the sixteen codes that were recorded.
-- `.homeycompose/capabilities/lucci_probe_*.json` — the six buttons.
-- The `lucci_probe_*` entries in [`drivers/light/driver.compose.json`](drivers/light/driver.compose.json),
-  the block in [`drivers/light/device.js`](drivers/light/device.js) and the marked tests.
-
-### Result
-
-Nothing recorded yet. For each code, what the light did: went on, went off, toggled, changed
-brightness, or nothing — and whether it behaved differently with the light already on.
+1. **`onoff` is idempotent against what Homey believes**, and transmits only when the belief has to
+   change. "Turn it on" twice turns it on once, which is what `onoff` means everywhere else. This
+   also fixes a real fault: Homey can deliver two fast presses of the tile as a single listener call
+   carrying the net value, which used to send one toggle and leave Homey and the light inverted.
+2. **A toggle button sits beside it**, sending one toggle per press and claiming nothing. A press is
+   an event, so it cannot be collapsed by value the way a state change can, and it is correct
+   however the light got to where it is. It is the way out when the belief has drifted: press until
+   the light does what you want, and Homey follows along.
+3. **What the handset does is overheard and believed**, because a received frame is evidence and a
+   stored belief is not.
 
 ## Adding a command
 

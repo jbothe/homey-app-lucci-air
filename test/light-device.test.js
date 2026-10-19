@@ -77,11 +77,15 @@ async function light({ on = true, at, bit24 = 0 } = {}) {
 const keysSent = device => device.sent.map(payload => identifyFrame(payload).key);
 const counted = (device, key) => keysSent(device).filter(k => k === key).length;
 
-// A capability request, then the move it may have started.
+// A capability request, the way Homey makes one: the listener runs, then Homey
+// writes the value that was asked for. Then the move it may have started, and a
+// tick for anything the device deferred past its own listener — which is where
+// a write to a *different* capability has to happen. See lib/reflect.js.
 async function request(device, capability, value) {
     await device.listeners[capability](value, {});
     device.capabilityValues[capability] = value;
     await device.moving;
+    await new Promise(resolve => setTimeout(resolve, 1));
 }
 
 async function receive(device, key, isFirst = true) {
@@ -119,6 +123,66 @@ test('onoff sends the one stateless toggle code', async () => {
     // Nothing about brightness: the toggle says nothing about the level, and
     // the level says nothing about the toggle.
     assert.equal(device.position, 10);
+});
+
+test('onoff is idempotent, because a stateless toggle is not', async () => {
+    // "Turn it on" twice turns it on once, which is what onoff means
+    // everywhere. Asking for the state it is already believed to be in used to
+    // send a toggle and turn the light off.
+    const device = await light({ on: true, at: 10 });
+
+    await request(device, 'onoff', true);
+    assert.deepEqual(device.sent, [], 'a flow asking for on twice turned the light off');
+    assert.ok(device.logs.some(line => line.includes('already believed to be on')), device.logs.join(' | '));
+
+    await request(device, 'onoff', false);
+    assert.deepEqual(keysSent(device), ['light.onoff'], 'a real change sent nothing');
+});
+
+test('two quick presses leave Homey and the light in step', async () => {
+    // Reported from the hardware: Homey can deliver two fast presses as a single
+    // listener call carrying the net value. That used to send one toggle and
+    // leave the two inverted — the drift onoff gets blamed for.
+    const device = await light({ on: false, at: 10 });
+
+    // Coalesced: off -> on -> off arrives as one call for the value it ended on.
+    await request(device, 'onoff', false);
+    assert.deepEqual(device.sent, [], 'one toggle went out for a net change of nothing');
+    assert.equal(device.capabilityValues.onoff, false);
+
+    // And delivered separately, the same two presses are two toggles and end
+    // where they started.
+    await request(device, 'onoff', true);
+    await request(device, 'onoff', false);
+    assert.deepEqual(keysSent(device), ['light.onoff', 'light.onoff']);
+    assert.equal(device.capabilityValues.onoff, false);
+});
+
+test('the toggle button sends one toggle and flips the belief', async () => {
+    // A press is an event, so it cannot be collapsed by value the way a state
+    // change can. This is the way out when the belief has drifted.
+    const device = await light({ on: false, at: 10 });
+
+    await request(device, 'lucci_toggle', true);
+    assert.deepEqual(keysSent(device), ['light.onoff']);
+    assert.equal(device.capabilityValues.onoff, true, 'the tile did not follow the toggle');
+
+    await request(device, 'lucci_toggle', true);
+    assert.deepEqual(keysSent(device), ['light.onoff', 'light.onoff'], 'the second press was collapsed');
+    assert.equal(device.capabilityValues.onoff, false);
+});
+
+test('the toggle button works whatever the light is believed to be doing', async () => {
+    // Unlike the brightness controls, which are gated on the light being on:
+    // this is the control that fixes a wrong belief, so it cannot be refused
+    // on the strength of one.
+    for (const on of [true, false]) {
+        const device = await light({ on, at: 10 });
+        await request(device, 'lucci_toggle', true);
+
+        assert.deepEqual(keysSent(device), ['light.onoff'], `believed ${on}`);
+        assert.equal(device.capabilityValues.onoff, !on);
+    }
 });
 
 test('a brightness button is one press and one step', async () => {
@@ -373,46 +437,4 @@ test('every press of a long move carries the learned bit', async () => {
 
     assert.ok(device.sent.length > 10, `only ${device.sent.length} presses`);
     for (const payload of device.sent) assert.equal(payload[24], 1);
-});
-
-// --- THROWAWAY: the discrete on/off experiment ------------------------------
-// Delete this block with lib/lucci-probe.js and the six capabilities.
-
-test('a probe button sends its code under the light selector', async () => {
-    const { PROBE_CODES, probeFrame } = require('../lib/lucci-probe');
-    const device = await light({ at: 10, bit24: 1 });
-
-    for (const code of PROBE_CODES) {
-        await request(device, `lucci_probe_${code}`, true);
-    }
-
-    assert.equal(device.sent.length, PROBE_CODES.length);
-    device.sent.forEach((payload, i) => {
-        assert.deepEqual(payload, probeFrame(ADDRESS, 1, PROBE_CODES[i]));
-        // Addressed to this fitting, carrying the bit 24 it expects: the probe
-        // is about the command field and nothing else.
-        assert.deepEqual(payload.slice(0, 16), ADDRESS);
-        assert.equal(payload[24], 1);
-        assert.deepEqual(payload.slice(16, 18), [0, 1], 'not the light selector');
-    });
-});
-
-test('a probe is not gated on the light being on', async () => {
-    // Unlike the brightness controls. Whether these codes do anything while the
-    // light is off is the sort of thing the experiment is for, so refusing to
-    // send them would answer the question by assuming it.
-    const device = await light({ on: false, at: 10 });
-    await request(device, 'lucci_probe_5', true);
-
-    assert.equal(device.sent.length, 1);
-});
-
-test('every probe says in the log which bits it sent', async () => {
-    // An experiment whose record is "I think I pressed the third one" is not an
-    // experiment.
-    const device = await light({ at: 10 });
-    await request(device, 'lucci_probe_3', true);
-
-    assert.ok(device.logs.some(line => line.includes('PROBE 000011 (3)')), device.logs.join(' | '));
-    assert.ok(device.logs.some(line => line.includes('watch the light')));
 });

@@ -268,8 +268,19 @@ Worth stating in the app's own documentation rather than discovering in a suppor
 
 - **The timer has no feedback.** `lucci_timer` reflects what was last commanded, not time remaining,
   and the app cannot know when the fan's timer expires.
-- **The light's on/off can invert** if its state is changed by something Homey cannot hear — a wall
-  switch, a power cut, a second handset. The next toggle then does the opposite of what was asked.
+- **The light's on/off cannot be trusted, and these fans are behind wall switches.** With the
+  fitting unpowered every command Homey sends does nothing, with no error and nothing to detect, so
+  Homey cannot know whether the light is lit or whether the fitting is even listening. Three things
+  follow. `onoff` is idempotent against the belief and transmits only when the belief must change,
+  which is what `onoff` means everywhere and which also fixes two fast tile presses arriving as one
+  listener call — that used to send a single toggle and invert the two. A `lucci_toggle` button sits
+  beside it, one toggle per press and no claim about the result, which is the way out when the
+  belief has drifted. And what the handset does is overheard and believed, a received frame being
+  evidence where a stored belief is not.
+- **A discrete on and off would have fixed it and do not appear to exist.** Six command values
+  around the toggle were tried on the hardware and none did anything; see RF_PROTOCOL.md. The other
+  55 unexplored values are not a cheap experiment, because that space almost certainly contains the
+  fitting's pairing and reset commands.
 - **The `dim` slider's position is an estimate between moves**, corrected by what the app overhears
   and re-anchored by calibrating, which works because the light saturates at both ends rather than
   wrapping. Each individual step is exact — one press, one step — so error enters only by missing

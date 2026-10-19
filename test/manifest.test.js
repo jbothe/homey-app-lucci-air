@@ -48,10 +48,7 @@ test('app.json is in step with .homeycompose', async (t) => {
         }
         assert.deepEqual(Object.keys(app.capabilities).sort(), [
             'lucci_brighter', 'lucci_dimmer', 'lucci_direction',
-            // THROWAWAY: the discrete on/off experiment. See lib/lucci-probe.js.
-            'lucci_probe_1', 'lucci_probe_2', 'lucci_probe_3',
-            'lucci_probe_5', 'lucci_probe_6', 'lucci_probe_7',
-            'lucci_speed', 'lucci_timer',
+            'lucci_speed', 'lucci_timer', 'lucci_toggle',
         ]);
     });
 });
@@ -104,8 +101,8 @@ test('the light offers what a relative protocol allows, and no more', () => {
     // saturates at both ends — so a slider can be made exact by driving into an
     // end stop. The two buttons are the honest core: one tap, one step, correct
     // however the light got to where it is.
-    assert.deepEqual(compose.capabilities.filter(c => !c.startsWith('lucci_probe_')),
-        ['onoff', 'dim', 'lucci_brighter', 'lucci_dimmer']);
+    assert.deepEqual(compose.capabilities,
+        ['onoff', 'dim', 'lucci_brighter', 'lucci_dimmer', 'lucci_toggle']);
     assert.equal(compose.class, 'light');
     assert.equal(compose.rf433.satelliteMode, true);
 
@@ -254,40 +251,5 @@ test('every string the app asks for is in every locale', () => {
             const value = key.split('.').reduce((at, part) => (at === undefined ? undefined : at[part]), strings);
             assert.equal(typeof value, 'string', `locales/${lang}.json is missing ${key}`);
         }
-    }
-});
-
-test('the probe buttons are a throwaway experiment, and say so', () => {
-    // THROWAWAY: delete this test with the rest of it. It is here so the
-    // experiment cannot quietly become part of the app — six unexplained
-    // buttons on a light is a thing to notice, not to inherit.
-    const { PROBE_CODES } = require('../lib/lucci-probe');
-    const compose = drivers.find(d => d.id === 'light');
-
-    assert.deepEqual(compose.capabilities.filter(c => c.startsWith('lucci_probe_')),
-        PROBE_CODES.map(code => `lucci_probe_${code}`));
-
-    // None of them is a command the app actually knows: the point is that these
-    // six values are unexplored, and a collision would mean the guess was
-    // already answered.
-    const known = new Set(require('../lib/lucci-protocol').COMMANDS
-        .filter(c => c.domain === 'light')
-        .map(c => parseInt(c.bits.join(''), 2)));
-    for (const code of PROBE_CODES) {
-        assert.ok(!known.has(code), `probe ${code} is already a known light command`);
-    }
-
-    // Zero is deliberately not among them: an all-zeros command field is the
-    // likeliest to be a sentinel, and the likeliest to do something that cannot
-    // be undone from the sofa.
-    assert.ok(!PROBE_CODES.includes(0), 'zero should not be probed casually');
-
-    // Each one is labelled with the bits it sends, so a log line and a button
-    // can be matched up afterwards.
-    for (const code of PROBE_CODES) {
-        const custom = read(`.homeycompose/capabilities/lucci_probe_${code}.json`);
-        assert.equal(custom.uiComponent, 'button', code);
-        assert.equal(custom.getable, false, code);
-        assert.match(custom.title.en, /^Probe [01]{6}$/);
     }
 });

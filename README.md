@@ -33,8 +33,14 @@ handset keeps Homey honest instead of putting it out of step.
 Every fan code has now been commanded from Homey and answered. The light is written and none of its
 three codes has been transmitted yet.
 
-The light is the awkward one: its brightness is **relative**, one code each way at any level, so
-there is nothing to read and nothing to set. Two buttons are the honest core — one tap, one step,
+The light is the awkward one. Its on/off is a single stateless toggle and the fittings are behind
+wall switches, so Homey can never be sure the light is lit — or that the fitting has power to hear
+it. `onoff` is therefore idempotent against what Homey believes, and a toggle button sits beside it
+that claims nothing and is always correct. Six candidate command codes were tried on the hardware in
+the hope of a discrete on and off; none did anything.
+
+Its brightness is **relative** too, one code each way at any level, so there is nothing to read and
+nothing to set. Two buttons are the honest core — one tap, one step,
 correct however the light got there. The slider works anyway because the light **saturates** at both
 ends rather than wrapping: aim past an end and the end absorbs the overshoot, which turns an estimate
 into a fact and makes calibrating something that cannot fail.

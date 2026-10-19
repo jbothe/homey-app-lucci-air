@@ -1,10 +1,10 @@
 {
   "type": "boolean",
   "title": {
-    "en": "Probe 000111",
-    "nl": "Probe 000111",
-    "de": "Probe 000111",
-    "fr": "Probe 000111"
+    "en": "Toggle",
+    "nl": "Omschakelen",
+    "de": "Umschalten",
+    "fr": "Basculer"
   },
   "getable": false,
   "setable": true,

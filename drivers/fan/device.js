@@ -4,6 +4,7 @@ const Homey = require('homey');
 const {
     SIGNAL_ID, ADDRESS_LENGTH, FAN_SPEEDS, buildFrame, sameAddress,
 } = require('../../lib/lucci-protocol');
+const { reflect } = require('../../lib/reflect');
 
 // The speed a fan starts on when it has never been given one.
 //
@@ -119,7 +120,7 @@ class LucciFanDevice extends Homey.Device {
         // it, which is the best available and worth knowing about.
         this.registerCapabilityListener('lucci_direction', async value => {
             await this.send(`fan.direction.${value}`, 'lucci_direction');
-            await this.reflect({ onoff: true }, { lucci_direction: value });
+            reflect(this, { onoff: true }, { lucci_direction: value });
         });
 
         // The timer implies nothing, because whether it starts a stopped fan has
@@ -232,33 +233,7 @@ class LucciFanDevice extends Homey.Device {
         // the ones that were requested once this resolves, so the work here is
         // the ones that were not — `onoff` after a speed change, and the speed
         // itself when the fallback above had to supply it.
-        await this.reflect({ onoff: true, lucci_speed: step }, values);
-    }
-
-    // Writes the capability values the request did not carry, and says whether
-    // they took.
-    //
-    // Deferred past this listener deliberately. Setting a capability from inside
-    // a listener for a different one did not stick: the speed picker transmitted
-    // and moved the fan while the tile stayed off, until an `onoff` toggle —
-    // which did nothing, the fan already running — put it right. Homey writes the
-    // requested capabilities when the listener resolves, so this waits its turn
-    // and then reads back what it wrote, which is what makes the next run's log
-    // able to settle it rather than leaving it to be noticed again.
-    async reflect(wanted, requested) {
-        const pending = Object.entries(wanted).filter(([capability, value]) => requested[capability] === undefined
-            && this.getCapabilityValue(capability) !== value);
-        if (pending.length === 0) return;
-
-        this.homey.setTimeout(async () => {
-            for (const [capability, value] of pending) {
-                if (!await this.set(capability, value)) continue;
-
-                const now = this.getCapabilityValue(capability);
-                if (now === value) this.log(`${capability} -> ${JSON.stringify(value)}`);
-                else this.error(`${capability} would not hold ${JSON.stringify(value)}; reads ${JSON.stringify(now)}`);
-            }
-        }, 0);
+        reflect(this, { onoff: true, lucci_speed: step }, values);
     }
 
     // Every Lucci frame Homey receives, from any handset in range.

@@ -25,12 +25,7 @@
     "dim",
     "lucci_brighter",
     "lucci_dimmer",
-    "lucci_probe_1",
-    "lucci_probe_2",
-    "lucci_probe_3",
-    "lucci_probe_5",
-    "lucci_probe_6",
-    "lucci_probe_7"
+    "lucci_toggle"
   ],
   "capabilitiesOptions": {
     "dim": {

@@ -3,8 +3,7 @@
 const Homey = require('homey');
 const { SIGNAL_ID, ADDRESS_LENGTH, buildFrame, sameAddress } = require('../../lib/lucci-protocol');
 const position = require('../../lib/light-position');
-// THROWAWAY: the discrete on/off experiment. See lib/lucci-probe.js.
-const probe = require('../../lib/lucci-probe');
+const { reflect } = require('../../lib/reflect');
 
 // Between presses, in milliseconds.
 //
@@ -61,13 +60,7 @@ class LucciLightDevice extends Homey.Device {
         this.registerCapabilityListener('dim', this.onCapabilityDim.bind(this));
         this.registerCapabilityListener('lucci_brighter', () => this.nudge(position.KEY_UP));
         this.registerCapabilityListener('lucci_dimmer', () => this.nudge(position.KEY_DOWN));
-
-        // **THROWAWAY: six buttons for the discrete on/off experiment.**
-        // Delete this block, lib/lucci-probe.js, the six lucci_probe_*
-        // capabilities and their entries in driver.compose.json when it is done.
-        for (const code of probe.PROBE_CODES) {
-            this.registerCapabilityListener(`lucci_probe_${code}`, () => this.sendProbe(code));
-        }
+        this.registerCapabilityListener('lucci_toggle', this.onCapabilityToggle.bind(this));
 
         this.onRX = this.onRX.bind(this);
         try {
@@ -108,13 +101,32 @@ class LucciLightDevice extends Homey.Device {
         }
     }
 
-    // One stateless toggle code, so Homey can only assume it worked.
+    // One stateless toggle code behind a capability that means a state.
     //
-    // This is the capability most likely to be wrong, and nothing can be done
-    // about it: if the light is switched at the wall, by a power cut or by a
-    // second handset, Homey's idea inverts and the next toggle does the opposite
-    // of what was asked. Said plainly in APP_PLAN.md under Known state drift.
+    // **So `onoff` is idempotent against what Homey believes**, and transmits
+    // only when the belief has to change. That is what `onoff` means everywhere
+    // else — "turn it on" twice turns it on once — and getting it wrong here had
+    // two consequences, both reported from the hardware.
+    //
+    // A flow asking for on, twice, used to send two toggles and turn the light
+    // off. And two quick presses of the tile, which Homey can deliver as a
+    // single listener call carrying the net value, used to send one toggle and
+    // leave Homey and the light inverted — the exact drift this capability is
+    // blamed for. Both disappear when the question is "does the belief need to
+    // change" rather than "was a button pressed".
+    //
+    // What it cannot fix: a belief that is already wrong. Then an `onoff`
+    // command correctly does nothing, and the light stays where it was. That is
+    // what `lucci_toggle` is for, and what the wall switches these fans are
+    // installed behind make unavoidable — see APP_PLAN.md under Known state
+    // drift.
     async onCapabilityOnOff(value) {
+        const believed = this.getCapabilityValue('onoff') === true;
+        if (value === believed) {
+            this.log(`onoff ${value}: already believed to be ${value ? 'on' : 'off'}; nothing sent`);
+            return;
+        }
+
         // A move still going would be transmitting brightness codes at a light
         // that is about to be switched, and those are ignored while it is off.
         this.cancelMove(`onoff ${value}`);
@@ -122,7 +134,29 @@ class LucciLightDevice extends Homey.Device {
         if (!await this.send('light.onoff', `onoff ${value}`)) {
             throw new Error(this.homey.__('errors.tx_failed'));
         }
-        this.log(`tx light.onoff (asked for ${value ? 'on' : 'off'})`);
+        this.log(`tx light.onoff (${believed ? 'on' : 'off'} -> ${value ? 'on' : 'off'})`);
+    }
+
+    // One press, one toggle, no claim about the result.
+    //
+    // The honest primitive, and the same argument as the brightness buttons: a
+    // press is an event, so it cannot be collapsed by value the way a state
+    // change can, and it is correct however the light got to where it is. It is
+    // the way out when the belief behind `onoff` has drifted — press it until
+    // the light is doing what you want, and Homey follows along.
+    async onCapabilityToggle() {
+        this.cancelMove('toggle');
+
+        if (!await this.send('light.onoff', 'toggle')) {
+            throw new Error(this.homey.__('errors.tx_failed'));
+        }
+
+        const believed = this.getCapabilityValue('onoff') === true;
+        this.log(`tx light.onoff (toggle; ${believed ? 'on' : 'off'} -> ${believed ? 'off' : 'on'})`);
+
+        // Deferred, because this is a write from inside a listener for another
+        // capability — the trap that cost a round trip once already.
+        reflect(this, { onoff: !believed });
     }
 
     // One press, one step, and nothing to remember. The honest core of the
@@ -292,25 +326,6 @@ class LucciLightDevice extends Homey.Device {
         this.log(`${frame.key} arrived with bit 24 ${frame.bit24} where this device stores`
             + ` ${this.bit24} — so the bit is not constant for one handset, which is`
             + ' the thing RF_PROTOCOL.md says is unknown about it.');
-    }
-
-    // THROWAWAY: transmits one unknown command under the light selector.
-    //
-    // Loud on purpose. The whole value of this is the pairing of a log line with
-    // what the light did a second later, and an experiment whose record is "I
-    // think I pressed the third one" is not an experiment.
-    async sendProbe(code) {
-        const payload = probe.probeFrame(this.address, this.bit24, code);
-        this.log(`PROBE ${probe.probeLabel(code)} -> [${payload.join('')}]`
-            + ' — watch the light: did it go on, go off, toggle, dim, or nothing?');
-
-        try {
-            await this.signal.tx(payload);
-            this.log(`PROBE ${probe.probeLabel(code)} sent`);
-        } catch (err) {
-            this.error(`PROBE ${probe.probeLabel(code)} failed:`, err.message);
-            throw new Error(this.homey.__('errors.tx_failed'));
-        }
     }
 
     onRX(frame, isFirst) {
