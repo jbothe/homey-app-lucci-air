@@ -63,7 +63,7 @@ more repetitions, which is far quicker than sending discrete presses.
 
 That makes a real `dim` slider workable, on three conditions:
 
-1. **The app tracks position itself**, 0 to N. A move to `k` transmits the appropriate code with
+1. **The app tracks position itself**, 0 to 31. A move to `k` transmits the appropriate code with
    roughly `|k - position| x framesPerStep` repetitions, then stores `k`.
 2. **Receiving keeps it honest.** Every handset press and hold is overheard, so the estimate can be
    corrected as the household uses the remote rather than drifting silently. A burst of frames is
@@ -80,15 +80,32 @@ extended repetition is correct for brightness specifically. It is not licence to
 The slider is marked best-effort in the app's own documentation. The two buttons are not, and remain
 the thing to reach for when it matters.
 
-### Two numbers this still needs
+### The range is 32 steps, so the slider must emulate a hold
 
-Both come from the hardware, and nothing in 34 recordings can supply them:
+Counted on the hardware: **32 brightness steps**. A power of two, which suggests the fitting holds
+a 5-bit level — not something the recordings can confirm, but it fits.
 
-- **N**, the number of steps from maximum to minimum, counted by single presses.
-- **T**, the seconds a continuous hold takes to traverse maximum to minimum.
+32 settles the mechanism. As discrete presses a full-range move is 32 x 423ms = **13.5s of airtime
+before any gaps**, which is no use as a slider. So emulating a hold with extra repetitions is not a
+refinement here, it is the only workable approach.
 
-Then `framesPerStep = (T x 21.4) / N`, and the slider is fully specified. Until they are measured
-the app ships the two buttons and no slider, which is a complete and honest device on its own.
+If the 2.76s hold that was recorded crossed the whole range, then a step is ~1.8 frames or ~87ms,
+a full-range move takes 2.76s and a four-step nudge 350ms — a perfectly usable slider. That "if" is
+the one measurement still missing.
+
+### The measurement still outstanding
+
+One experiment gives both remaining answers: **from maximum, hold the dimmer down and time how long
+until the light stops changing.**
+
+- The elapsed time is **T**, and `framesPerStep = (T x 21.4) / 32`.
+- Whether it stops at all answers **saturation**. If holding past the bottom leaves the light at
+  minimum, calibrate works: drive deliberately past the end and position is known exactly. If it
+  instead wraps round to maximum, the slider has no anchor, and it should be dropped in favour of
+  the two buttons rather than shipped as a guess.
+
+Until that is measured the app ships the two buttons and no slider, which is a complete and honest
+device on its own.
 
 ### Dim does nothing while the light is off
 
