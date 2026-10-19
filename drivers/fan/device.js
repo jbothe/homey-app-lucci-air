@@ -32,7 +32,14 @@ class LucciFanDevice extends Homey.Device {
         this.log(`initialised; address ${this.address.join('')}`);
 
         // So the tile always offers a speed, and `onoff` always has one to send.
-        if (!FAN_SPEEDS.includes(this.getCapabilityValue('lucci_speed'))) {
+        // Which of the two happened is logged, because `onoff` true sends this
+        // step and the log otherwise cannot tell "resumed what you last chose"
+        // from "fell back to the default" — the difference a user would notice.
+        const stored = this.getCapabilityValue('lucci_speed');
+        if (FAN_SPEEDS.includes(stored)) {
+            this.log(`speed: resumed step ${stored}`);
+        } else {
+            this.log(`speed: none stored (${JSON.stringify(stored)}), starting at step ${DEFAULT_SPEED}`);
             await this.setCapabilityValue('lucci_speed', DEFAULT_SPEED).catch(this.error);
         }
 
@@ -46,7 +53,10 @@ class LucciFanDevice extends Homey.Device {
     // deliberately not more: on the sibling RC300 app, transmitting materially
     // longer than the real remote made the receiver re-trigger and register one
     // Homey command as two presses. The count lives in the signal definition.
-    async send(key) {
+    // `why` names the capability that asked for it. Without it the log cannot
+    // tell `onoff` true from the speed picker — both come out as
+    // `tx fan.speed.2`, and they are different paths through this file.
+    async send(key, why) {
         const payload = buildFrame(this.address, key);
         const startedAt = Date.now();
 
@@ -55,9 +65,9 @@ class LucciFanDevice extends Homey.Device {
             // repetitions have finished going out, so this time is call latency
             // rather than the ~423ms a press actually occupies.
             await this.signal.tx(payload);
-            this.log(`tx ${key} ok (queued in ${Date.now() - startedAt}ms)`);
+            this.log(`tx ${key} ok (${why}, queued in ${Date.now() - startedAt}ms)`);
         } catch (err) {
-            this.error(`tx ${key} failed after ${Date.now() - startedAt}ms:`, err.message);
+            this.error(`tx ${key} failed after ${Date.now() - startedAt}ms (${why}):`, err.message);
             this.error(`  payload was [${payload.join('')}]`);
             throw err;
         }
@@ -69,13 +79,13 @@ class LucciFanDevice extends Homey.Device {
     // where a fan is started by pressing a speed button.
     async onCapabilityOnOff(value) {
         if (!value) {
-            await this.send('fan.off');
+            await this.send('fan.off', 'onoff false');
             return;
         }
 
         const speed = this.getCapabilityValue('lucci_speed');
         const step = FAN_SPEEDS.includes(speed) ? speed : DEFAULT_SPEED;
-        await this.send(`fan.speed.${step}`);
+        await this.send(`fan.speed.${step}`, `onoff true, stored step ${step}`);
 
         // Only once the frame is away, and only if the fallback was used, so the
         // tile shows the step the fan is actually on.
@@ -87,7 +97,7 @@ class LucciFanDevice extends Homey.Device {
     // is no guard against setting a speed while off, unlike the sibling RC300:
     // on this protocol that is the ordinary way to start the fan.
     async onCapabilitySpeed(value) {
-        await this.send(`fan.speed.${value}`);
+        await this.send(`fan.speed.${value}`, 'lucci_speed');
 
         // setCapabilityValue, not triggerCapabilityListener: the fan is now
         // running, and saying so must not transmit a second command.

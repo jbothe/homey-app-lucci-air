@@ -164,10 +164,12 @@ against itself.
    capabilities.
 3. **Fan driver, transmit only**: `onoff` and `lucci_speed`, with the learn pair step. **Done, and
    the fan responded on the first attempt** — no complemented payload, no preamble adjustment, no
-   change to `repetitions`, all of which were the contingencies. Three speed commands each moved the
-   fan one step and none of them double-stepped, so 9 repetitions is right for this receiver as well
-   as for the handset. Receiving also works, which was not being tested: a frame arrived and
-   decoded on the first run, and it is what found the leading-bit truncation now handled in
+   change to `repetitions`, all of which were the contingencies. Then confirmed across two sessions:
+   on, off, a speed set while the fan was off starting it at that speed, and speeds changed while
+   running, over five of the six steps. Nothing double-stepped, so 9 repetitions is right for this
+   receiver as well as for the handset. **The asymmetric `onoff` works in both directions**, which
+   was the design's one real bet. Receiving also works, which was not being tested: a frame arrived
+   and decoded on the first run, and it is what found the leading-bit truncation now handled in
    `completeFrame`.
 4. **Direction and timer** on the fan.
 5. **Receiving**, and state mirroring from the handset.

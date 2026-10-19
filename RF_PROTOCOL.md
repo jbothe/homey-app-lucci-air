@@ -8,10 +8,10 @@ This is a working hypothesis, not a manufacturer specification. Treat the struct
 guide for decoding further commands, and the caveats as the list of things one handset cannot
 settle.
 
-**The fan has now answered.** Homey paired off this handset, and three speed codes built from the
-tables below each moved the fan — so the frame layout, the address, the symbol alphabet and the
-absolute speed ladder are confirmed on the hardware, not merely consistent with the recordings. The
-off code, direction, the timer and the light have still only been listened to; see the caveats.
+**The fan has now answered.** Homey paired off this handset, and the fan's power and all six speed
+steps are confirmed on the hardware — the frame layout, the address, the symbol alphabet, the timing
+profile and the absolute speed ladder, not merely consistent with the recordings but driving a real
+fan. Direction, the timer and the light have still only been listened to; see the caveats.
 
 ## Frame layout
 
@@ -292,11 +292,15 @@ preamble mismatches confined to the first four positions — that is, to the art
 - **"Up at maximum" rests on one clean frame.** It repeats step 5, so the ladder appears to top out
   rather than wrap, but that is the weakest claim here. It does not affect the app, which never
   needs to send a relative step.
-- **Only the speed codes have been sent.** Pairing and three speed commands are confirmed on the
-  hardware, which settles the layout, the address, the alphabet and the speed ladder. The off code,
-  the two direction codes, the four timer codes and all three light codes are still only observed:
-  they are built the same way from the same tables, which is good reason to expect them to work and
-  not evidence that they do.
+- **The fan's power and speed codes have been sent; nothing else has.** Confirmed on the hardware:
+  pairing, the off code, and speed steps 0, 1, 2, 3 and 5 — each setting the fan to the step asked
+  for, from standing and while already running. Step 4 is the only speed not yet sent, and it sits
+  between two that were. The two direction codes, the four timer codes and all three light codes are
+  still only observed: they are built the same way from the same tables, which is good reason to
+  expect them to work and not evidence that they do.
+- **A speed code starts the fan from off**, which the handset's behaviour implied and the radio now
+  confirms. It is what makes Homey's asymmetric `onoff` honest: there is no "fan on" code, and
+  sending a speed is how the fan is started.
 
 ## Adding a command
 

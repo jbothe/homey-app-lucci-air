@@ -11,8 +11,9 @@ needs no hub, no bridge and no account:
 
 ## Status
 
-**It drives a real fan.** Homey paired off the handset and three speed commands each moved the fan,
-first attempt — so the protocol is no longer a hypothesis.
+**It drives a real fan.** Homey paired off the handset, and the fan now answers on, off, and every
+speed step it has been asked for — including a speed set while it was off, which starts it there. So
+the protocol is no longer a hypothesis.
 
 | | |
 |---|---|
@@ -21,9 +22,9 @@ first attempt — so the protocol is no longer a hypothesis.
 | pairing — learns the address off your own handset | [`drivers/fan/pair/learn.html`](drivers/fan/pair/learn.html) |
 | still to come | direction, timer, state mirroring, the light, flow cards |
 
-The off code, direction, the timer and the light are built from the same tables but have not been
-sent yet. Receiving works too, which is how the receiver's habit of dropping a burst's first bit
-turned up — see "Receiving" in [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
+Direction, the timer and the light are built from the same tables but have not been sent yet.
+Receiving works too, which is how the receiver's habit of dropping a burst's first bit turned up —
+see "Receiving" in [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
 
 - [`RF_PROTOCOL.md`](RF_PROTOCOL.md) — the frame layout, all sixteen command codes, and what each
   control does. Reverse-engineered from 33 recordings covering every button.
