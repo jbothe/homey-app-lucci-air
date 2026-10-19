@@ -5,7 +5,8 @@ const assert = require('node:assert/strict');
 
 const {
     parseCaptures, clusterDurations, gapParity, separatorThreshold, splitFrames,
-    analyseCapture, analyseCaptures, renderFrame, framesAgree, fieldRuns, pairRepeats, OVERFLOW,
+    analyseCapture, analyseCaptures, renderFrame, framesAgree, fieldRuns, pairRepeats,
+    repairSpikes, OVERFLOW,
 } = require('../tools/pulses');
 const {
     synthesise, captureFile, BINARY, TABLE, repeat,
@@ -304,4 +305,97 @@ test('a long preamble of repeated pulses is found, odd length and all', () => {
     assert.equal(result.alignment.alphabet.length, 2);
     assert.deepEqual(result.distinct, [['0101110011110011101010100', 9]]);
     assert.ok(Math.abs(result.interval - 9416) < 60, `interval ${result.interval}`);
+});
+
+// Splits one duration into three that sum back to it, none of them landing on
+// a real class — a pulse as the recorder reports it when it invents a pair of
+// transitions inside one.
+const chop = (value) => {
+    const first = Math.round(value * 0.5);
+    const second = Math.round(value * 0.3);
+    return [first, second, value - first - second];
+};
+
+test('repairSpikes merges a pulse the recorder reported as several', () => {
+    // 262,208,10 in place of one 480us pulse, as the real Lucci recordings
+    // contain. The fragments sum back to a real duration, which is what marks
+    // them as invented transitions rather than a mistimed edge.
+    const clean = synthesise({ ...BINARY, frames: repeat(bits(BINARY_FRAME), 6), jitter: 8 });
+    const chopped = [...clean];
+    chopped.splice(4, 1, ...chop(clean[4]));
+
+    const { durations, repaired } = repairSpikes(chopped);
+    assert.equal(repaired, 1);
+    assert.equal(durations.length, clean.length, 'alternation must survive the merge');
+    assert.deepEqual(durations, clean);
+});
+
+test('repairSpikes repairs a lone invented transition too', () => {
+    // One extra transition rather than a pair, which splits a duration in two
+    // and flips pulses for gaps through the rest of the frame. Merging the two
+    // back flips them to where they belong.
+    const clean = synthesise({ ...BINARY, frames: repeat(bits(BINARY_FRAME), 6), jitter: 8 });
+    const half = Math.round(clean[4] / 2);
+    const chopped = [...clean];
+    chopped.splice(4, 1, half, clean[4] - half);
+
+    assert.equal(chopped.length, clean.length + 1, 'the capture is one duration longer');
+
+    const { durations, repaired } = repairSpikes(chopped);
+    assert.equal(repaired, 1);
+    assert.deepEqual(durations, clean);
+});
+
+test('repairSpikes leaves a mistimed edge alone rather than inventing a repair', () => {
+    // 194,924 in place of a 490us pulse and a 600us gap: the transition moved
+    // instead of multiplying, and no merge recovers it. The frame should be
+    // reported unreadable, not quietly rewritten.
+    const clean = synthesise({ ...BINARY, frames: repeat(bits(BINARY_FRAME), 6), jitter: 8 });
+    const broken = [...clean];
+    broken.splice(2, 2, 194, 924);
+
+    const { durations, repaired } = repairSpikes(broken);
+    assert.equal(repaired, 0);
+    assert.deepEqual(durations, broken);
+});
+
+test('repairSpikes will not merge a real pair on the strength of one odd neighbour', () => {
+    // A window has to hold at least two durations that do not belong, or a
+    // single spike beside two good durations could carry them off with it.
+    const clean = synthesise({ ...BINARY, frames: repeat(bits(BINARY_FRAME), 6), jitter: 8 });
+    const spiked = [...clean];
+    spiked.splice(6, 0, 120);
+
+    const { durations } = repairSpikes(spiked);
+    assert.equal(durations.filter((v, i) => v !== spiked[i]).length, 0, 'nothing else was touched');
+});
+
+test('one chopped pulse per repeat does not cost the whole reading', () => {
+    // Each invented transition adds two durations to its frame, at a different
+    // offset in each, so the frames come out different lengths and no single
+    // preamble length explains them all. Unrepaired, a capture like this reads
+    // as no structure at all — which is what the first Fan Speed Up recording
+    // did.
+    const frames = repeat(bits(BINARY_FRAME), 8);
+    const durations = synthesise({ ...BINARY, frames, jitter: 10 });
+
+    // Chop one pulse in each of three frames, at a different offset each time.
+    const chopped = [...durations];
+    for (const at of [5 * 82 + 20, 3 * 82 + 8, 1 * 82 + 40]) {
+        chopped.splice(at, 1, ...chop(chopped[at]));
+    }
+
+    const result = analyseCapture(chopped);
+    assert.notEqual(result.alignment, null, 'the chopped pulses cost the whole reading');
+    assert.equal(result.repaired, 3);
+
+    // Seven of the eight, not all eight. The classes are worked out from the
+    // glitched capture, so a fragment can land inside a real class — here one
+    // extends the short-pulse class far enough to belong — and the repair then
+    // starts a position late and that frame is misread rather than dropped.
+    // Needing a second repeat to corroborate a reading is what contains it: the
+    // misread frame is set aside, and the field map never sees it.
+    assert.deepEqual(result.distinct, [[BINARY_FRAME, 7]]);
+    assert.equal(result.discarded.length, 1);
+    assert.notEqual(result.discarded[0][0], BINARY_FRAME);
 });

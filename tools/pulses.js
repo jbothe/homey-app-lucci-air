@@ -56,6 +56,12 @@ const CLUSTER_WIDTHS = [1.12, 1.2, 1.3, 1.45, 1.6];
 
 // A class wider than this is reported as probably two symbols read as one.
 const SUSPECT_WIDTH = 1.35;
+
+// How many durations a repair may merge, in the order tried. The odd lengths
+// come first because they keep pulses and gaps alternating, which is what an
+// invented pair of transitions needs; the even ones repair a lone transition,
+// which has flipped them.
+const SPIKE_WINDOWS = [3, 2, 5, 4];
 const MAX_CLUSTER_WIDTH = CLUSTER_WIDTHS[CLUSTER_WIDTHS.length - 1];
 
 // A real alphabet is small. Binary (Bear) or a four-entry table (RC300) are
@@ -185,6 +191,91 @@ function clusterDurations(values, {
 }
 
 const clusterOf = (value, clusters) => clusters.findIndex(c => value >= c.min && value <= c.max);
+
+// Repairs spurious transitions.
+//
+// The recorder sometimes reports one pulse as several shorter ones — a run like
+// 262,208,10 where the handset sent a single 480us pulse. The fragments sum
+// back to a real duration, which is what identifies them: the receiver invented
+// transitions inside a pulse rather than mistiming its edges.
+//
+// Left alone they are fatal to the whole reading, not merely to the frame that
+// holds them. Each invented transition adds durations to its frame, so the
+// frames come out different lengths, and the extra durations fall at a
+// different offset in each one, so no single preamble length explains them all.
+// A capture with one chopped pulse per repeat reads as no structure at all.
+//
+// A duration belongs if it falls in a well-populated class. Starting from one
+// that does not, the shortest window whose durations sum to a real duration is
+// merged back into one. Windows that keep pulses and gaps alternating are
+// preferred, since an invented transition usually comes in pairs; an odd one,
+// which flips pulses for gaps through the rest of the frame, is repaired by a
+// window that flips them back.
+//
+// Three things keep it from inventing repairs of its own. A window must hold at
+// least two durations that do not belong, so a legitimate pair cannot be merged
+// on the strength of one odd neighbour beside it. Its sum must land on a real
+// class. And it is bounded, so a run of noise cannot swallow the preamble. What
+// cannot be repaired this way — a mistimed edge, where the transition moved
+// rather than multiplied — is left exactly as it was, for the frame to be
+// reported unreadable.
+//
+// It does not catch everything. The classes are worked out from the glitched
+// capture, so a fragment can happen to land inside a real class, and the repair
+// then starts a position late and that frame is misread rather than dropped.
+// What contains that is a reading needing a second repeat to corroborate it:
+// the misread frame is set aside, and never reaches the field map.
+function repairSpikes(durations) {
+    const inRange = durations.filter(d => d < OVERFLOW);
+    if (inRange.length === 0) return { durations, repaired: 0 };
+
+    // Populated classes only: a glitch is rare by nature, and treating one as a
+    // class of its own is what this is here to undo.
+    const floor = Math.max(3, inRange.length * 0.015);
+    const classes = clusterDurations(inRange).filter(c => c.count >= floor);
+    if (classes.length === 0) return { durations, repaired: 0 };
+
+    const belongs = v => v === OVERFLOW || classes.some(c => v >= c.min && v <= c.max);
+    const real = v => classes.some(c => Math.abs(v - c.mean) <= c.mean * CLUSTER_TOLERANCE);
+
+    const out = [];
+    let repaired = 0;
+    let i = 0;
+
+    while (i < durations.length) {
+        if (belongs(durations[i])) {
+            out.push(durations[i]);
+            i += 1;
+            continue;
+        }
+
+        let merged = null;
+        for (const length of SPIKE_WINDOWS) {
+            if (i + length > durations.length) continue;
+
+            const window = durations.slice(i, i + length);
+            if (window.filter(v => !belongs(v)).length < 2) continue;
+
+            const sum = window.reduce((a, b) => a + b, 0);
+            if (!real(sum)) continue;
+
+            merged = { sum, length };
+            break;
+        }
+
+        if (merged === null) {
+            out.push(durations[i]);
+            i += 1;
+            continue;
+        }
+
+        out.push(merged.sum);
+        repaired += 1;
+        i += merged.length;
+    }
+
+    return { durations: out, repaired };
+}
 
 // Which index parity holds the gaps. A capture alternates pulse and gap, and
 // normally opens on a pulse, but it can open mid-frame — so rather than assume,
@@ -515,9 +606,10 @@ function analyseCapture(durations, label = 'capture') {
 // command if it moves between them.
 function analyseCaptures(blocks) {
     const captures = blocks.map(({ label, durations }) => {
-        const threshold = separatorThreshold(durations);
-        const frames = splitFrames(durations, threshold);
-        return { label, threshold, frames };
+        const { durations: clean, repaired } = repairSpikes(durations);
+        const threshold = separatorThreshold(clean);
+        const frames = splitFrames(clean, threshold);
+        return { label, threshold, frames, repaired };
     });
 
     const all = captures.flatMap(c => c.frames);
@@ -578,6 +670,7 @@ function analyseCaptures(blocks) {
             threshold: c.threshold,
             frames: c.frames.length,
             whole: c.whole.length,
+            repaired: c.repaired,
             // Frames that ended at a separator. The tail of a capture is
             // usually a fragment with nothing after it, so counting those too
             // would overstate what the handset sends by one.
@@ -668,6 +761,7 @@ module.exports = {
     separatorThreshold,
     separatorFloor,
     splitFrames,
+    repairSpikes,
     scoreAlignment,
     inferAlignment,
     decodeFrame,
