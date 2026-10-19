@@ -1,0 +1,19 @@
+{
+  "name": "com.lucci.fan",
+  "version": "0.1.0",
+  "description": "Lucci 433 MHz ceiling fans, reverse-engineered from the handset.",
+  "main": "app.js",
+  "license": "GPL-3.0",
+  "author": "John Bothe <jbothe@gmail.com>",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "analyse": "node tools/analyse-capture.js captures/raw-captures.txt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jbothe/homey-app-lucci"
+  },
+  "bugs": {
+    "url": "https://github.com/jbothe/homey-app-lucci/issues"
+  }
+}
