@@ -9,7 +9,7 @@ const {
     repairSpikes, OVERFLOW,
 } = require('../tools/pulses');
 const {
-    synthesise, captureFile, BINARY, TABLE, repeat,
+    synthesise, captureFile, BINARY, TABLE, SYNC, repeat,
 } = require('./synth');
 
 const bits = s => s.split('').map(Number);
@@ -287,24 +287,43 @@ test('a long preamble of repeated pulses is found, odd length and all', () => {
     // The Lucci handset opens with ten short pulses rather than one long one,
     // which comes to an odd number of durations and so shifts the payload onto
     // the offsets the preamble's gaps used.
-    const sync = [];
-    for (let i = 0; i < 10; i += 1) sync.push(500, 595);
-    sync.pop();
+    const frame = '0101110011110011101010100';
+    const result = analyseCapture(synthesise({ ...SYNC, frames: repeat(bits(frame), 9), jitter: 10 }));
 
-    const durations = synthesise({
-        sof: sync,
-        words: [[295, 797], [791, 301]],
-        interval: 9416,
-        frames: repeat(bits('0101110011110011101010100'), 9),
-        jitter: 10,
-        trailing: false,
-    });
-
-    const result = analyseCapture(durations);
     assert.equal(result.alignment.sofLength, 19);
     assert.equal(result.alignment.alphabet.length, 2);
-    assert.deepEqual(result.distinct, [['0101110011110011101010100', 9]]);
-    assert.ok(Math.abs(result.interval - 9416) < 60, `interval ${result.interval}`);
+    assert.deepEqual(result.distinct, [[frame, 9]]);
+    assert.ok(Math.abs(result.interval - SYNC.interval) < 60, `interval ${result.interval}`);
+});
+
+test('a mistimed first edge costs that frame nothing', () => {
+    // The recorder mistimes the opening edge of a frame often, reporting 49,390
+    // or 333,744 where the handset sent 493,610. The durations are junk but the
+    // payload behind them still sits at its proper offset, so the frame reads
+    // perfectly — and holding every preamble position to the median threw away
+    // half of some real captures, taking the whole reading with them.
+    const frame = '0101110011110011100011010';
+    const durations = synthesise({ ...SYNC, frames: repeat(bits(frame), 9), jitter: 10 });
+
+    // Each frame is 19 preamble + 50 payload + 1 interval durations. Wreck the
+    // opening pair of three of them with 333,744, as the real recordings have
+    // it: neither value belongs to a class and their sum is not a real duration
+    // either, so no repair applies and the junk stays for the preamble match to
+    // deal with.
+    const period = 70;
+    for (const f of [3, 5, 7]) {
+        durations[f * period] = 333;
+        durations[f * period + 1] = 744;
+    }
+
+    const result = analyseCapture(durations);
+    assert.notEqual(result.alignment, null, 'the mistimed edges cost the whole reading');
+    assert.deepEqual(result.distinct, [[frame, 9]]);
+
+    // And the preamble is measured position by position over the frames that
+    // agree there, so the junk never reaches it.
+    assert.ok(Math.abs(result.alignment.sof[0] - 500) < 30, `sof[0] ${result.alignment.sof[0]}`);
+    assert.ok(Math.abs(result.alignment.sof[1] - 595) < 30, `sof[1] ${result.alignment.sof[1]}`);
 });
 
 // Splits one duration into three that sum back to it, none of them landing on

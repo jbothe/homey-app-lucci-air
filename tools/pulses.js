@@ -101,6 +101,21 @@ const SYMBOL_MIN_PER_FRAME = 2;
 // genuinely glitched frames, which do occur and are reported.
 const MIN_EXPLAINED = 0.6;
 
+// How much of a preamble may fail to match and the frame still be read.
+//
+// The recorder mistimes the first edge of a frame often — the moment it arms,
+// or the receiver's gain settles — reporting 49,390 or 333,744 where the
+// handset sent 493,610. Those durations are junk, but the payload behind them
+// still sits at its proper offset, so the frame is perfectly readable. Holding
+// every preamble position to the median threw away half of some captures and
+// took the reading with them.
+//
+// A frame that began mid-preamble is a different matter, and is not what this
+// lets in: a preamble of repeated pulses would match a shifted frame at most
+// positions, but such a frame is short, and is already excluded for having the
+// wrong number of durations.
+const SOF_MISMATCH_SHARE = 0.2;
+
 // A reading of a frame has to be corroborated by another repeat to count. One
 // frame reading its own way is a glitched frame, and letting it through makes
 // a position that never moves look as though it varies.
@@ -392,10 +407,13 @@ function scoreAlignment(frames, sofLength, {
     // frame to agree lets one truncated repeat — and the first repeat of a
     // capture is often truncated — veto the whole reading.
     const centre = Array.from({ length: sofLength }, (_, i) => median(frames.map(f => f.durations[i])));
-    const aligned = frames.filter(f => centre.every((value, i) => {
-        const seen = f.durations[i];
-        return seen <= value * (1 + CLUSTER_TOLERANCE) && seen >= value / (1 + CLUSTER_TOLERANCE);
-    }));
+    const matches = (value, i) => value <= centre[i] * (1 + CLUSTER_TOLERANCE)
+        && value >= centre[i] / (1 + CLUSTER_TOLERANCE);
+
+    const allowed = Math.floor(sofLength * SOF_MISMATCH_SHARE);
+    const aligned = frames.filter(
+        f => centre.filter((_, i) => !matches(f.durations[i], i)).length <= allowed,
+    );
     if (aligned.length / frames.length < minExplained) return null;
 
     const bodies = aligned.map(f => f.durations.slice(sofLength));
@@ -468,9 +486,13 @@ function scoreAlignment(frames, sofLength, {
         residual,
         maxWidth,
         aligned: aligned.length,
-        // Measured only over the frames that follow it, so a truncated repeat
-        // cannot drag the preamble's durations off.
-        sof: Array.from({ length: sofLength }, (_, i) => Math.round(mean(aligned.map(f => f.durations[i])))),
+        // Measured position by position, over only the frames that agree at that
+        // position, so a mistimed first edge cannot drag the preamble's
+        // durations off.
+        sof: Array.from({ length: sofLength }, (_, i) => {
+            const agreeing = aligned.map(f => f.durations[i]).filter(v => matches(v, i));
+            return Math.round(agreeing.length > 0 ? mean(agreeing) : centre[i]);
+        }),
         pulseClusters,
         gapClusters,
         alphabet: alphabetFrom(types, pulseClusters, gapClusters),
