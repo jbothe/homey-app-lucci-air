@@ -53,11 +53,19 @@ test('clusterDurations will not chain two durations into one class', () => {
     for (const c of clusters) assert.ok(c.max <= c.min * 1.2, `class ${c.min}-${c.max} is too wide`);
 });
 
-test('clusterDurations flags a class pressed against the width cap', () => {
-    // It may be two symbols chained, or one symbol the cap cut in half. Either
-    // way every reading taken from it would be wrong, so it is reported.
-    const [cluster] = clusterDurations([1000, 1100, 1190], { maxWidth: 1.2 });
-    assert.equal(cluster.suspect, true);
+test('clusterDurations flags a class too wide to be one duration', () => {
+    // Two symbols chained into one class make every reading taken from it
+    // wrong, so a class wider than any single duration plausibly is gets
+    // reported.
+    const [chained] = clusterDurations([1000, 1200, 1400, 1550], { maxWidth: 1.6 });
+    assert.equal(chained.suspect, true);
+
+    // But a class sitting right at a tight cap is the ordinary case, not a
+    // warning: inferAlignment tries every cap and keeps whichever reading fits
+    // best, so flagging that would warn on every clean capture. This is what
+    // the real Lucci recordings do, at 282-312us.
+    const [tight] = clusterDurations([282, 295, 312], { maxWidth: 1.12 });
+    assert.equal(tight.suspect, false);
 });
 
 test('gapParity finds the side holding the long gaps, whichever the capture opens on', () => {

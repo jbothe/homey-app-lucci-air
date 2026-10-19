@@ -35,6 +35,11 @@ if (blocks.length === 0) {
 const warnings = [];
 const result = analyseCaptures(blocks);
 
+// Repeats of one button are not separate buttons, and several of the checks
+// below only mean anything once more than one button has been recorded.
+const baseLabel = label => label.replace(/\s*\((?:repeat|repeated|again|2|b)\)$/i, '').toLowerCase();
+const buttons = new Set(blocks.map(b => baseLabel(b.label))).size;
+
 console.log(`# ${file}`);
 console.log(`${blocks.length} capture${blocks.length === 1 ? '' : 's'}: ${blocks.map(b => b.label).join(', ')}`);
 
@@ -158,9 +163,24 @@ if (constantPrefix > 0) {
         + ' found — if the handset has no switches, check the captures are all from one handset');
 }
 
-if (positions.every(p => p.constant)) {
-    warnings.push('every position is constant across all captures, which cannot be right for'
-        + ' different buttons — check the captures are labelled correctly and are not duplicates');
+if (buttons === 1) {
+    console.log(`\n  Only one button has been recorded, so nothing here distinguishes the parts of`);
+    console.log('  the frame that identify the handset from the parts that carry the command.');
+    console.log('  That needs a second button. See CAPTURE_GUIDE.md.');
+}
+
+if (positions.every(p => p.constant) && buttons > 1) {
+    warnings.push(`every position is constant across all ${buttons} buttons recorded, which cannot`
+        + ' be right — check the captures are labelled correctly and are not the same recording'
+        + ' pasted twice');
+}
+
+// How closely the reading fits what was recorded. A poor fit is the symptom of
+// two symbols having been read as one, which no other check here would catch.
+if (alignment.residual > 0.15) {
+    warnings.push(`durations sit up to ${(alignment.residual * 100).toFixed(0)}% away from the symbol`
+        + ' each was assigned to, which is a loose fit. Two symbols may have been read as one, or'
+        + ' the handset is transmitting less consistently than it should');
 }
 
 // ----------------------------------------------------------------- repeats --

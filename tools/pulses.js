@@ -53,6 +53,9 @@ const CLUSTER_MIN_GAP = 25;
 // inflates the alphabet; too loose and the merged class sits further from the
 // durations assigned to it. Both show up in the scoring.
 const CLUSTER_WIDTHS = [1.12, 1.2, 1.3, 1.45, 1.6];
+
+// A class wider than this is reported as probably two symbols read as one.
+const SUSPECT_WIDTH = 1.35;
 const MAX_CLUSTER_WIDTH = CLUSTER_WIDTHS[CLUSTER_WIDTHS.length - 1];
 
 // A real alphabet is small. Binary (Bear) or a four-entry table (RC300) are
@@ -171,11 +174,13 @@ function clusterDurations(values, {
         max: c.max,
         mean: Math.round(mean(c.values)),
         count: c.values.length,
-        // A cluster pressed right up against the width cap may have chained two
-        // symbols together, or may be one symbol that was cut in half by the
-        // cap. Either would make every reading downstream of it wrong, so it is
-        // reported rather than fixed.
-        suspect: c.max >= c.min * (maxWidth - 0.02),
+        // Wider than any one duration plausibly is, so this class has probably
+        // chained two symbols together — which would make every reading
+        // downstream of it wrong. Judged against a fixed ratio, not against the
+        // cap in force: a class sitting at a tight cap is the ordinary case,
+        // since inferAlignment tries every cap and keeps the reading that fits
+        // best, and flagging that would warn on every clean capture.
+        suspect: c.max > c.min * SUSPECT_WIDTH,
     }));
 }
 
