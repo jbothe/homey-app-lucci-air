@@ -252,6 +252,13 @@ class LucciFanDevice extends Homey.Device {
         // Each press is transmitted nine times; only act on it once.
         if (isFirst === false) return;
 
+        // A frame whose address had a bit guessed rather than heard cannot say
+        // whose it is, and this receiver guesses one on every burst's first
+        // frame. The rest of the burst arrives in full, so nothing is lost by
+        // waiting for it — see "Bit 24" in RF_PROTOCOL.md for why the guess
+        // stopped being exact.
+        if (!frame.addressSure) return;
+
         // Another household's handset, or another fan in this one.
         if (!sameAddress(frame.address, this.address)) return;
 

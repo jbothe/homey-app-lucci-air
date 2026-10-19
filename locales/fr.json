@@ -15,7 +15,8 @@
     "retry": "Réessayer",
     "found_hint": "Ajoutez maintenant votre ventilateur. Homey peut lui envoyer les mêmes codes que la télécommande — mais le ventilateur ne renvoie rien, donc Homey affiche ce qu'il a commandé ou entendu en dernier.",
     "not_learned": "Homey n'a pas encore appris votre télécommande. Revenez en arrière et appuyez sur une touche.",
-    "found_hint_light": "Ajoutez maintenant votre lampe. Homey peut lui envoyer les mêmes codes que la télécommande — mais la lampe ne renvoie rien, donc la luminosité est suivie et non mesurée. Vous pouvez calibrer à tout moment via Réglages → Maintenance → Essayer de réparer."
+    "found_hint_light": "Ajoutez maintenant votre lampe. Homey peut lui envoyer les mêmes codes que la télécommande — mais la lampe ne renvoie rien, donc la luminosité est suivie et non mesurée. Vous pouvez calibrer à tout moment via Réglages → Maintenance → Essayer de réparer.",
+    "timeout_restored": "Homey a entendu une télécommande Lucci mais jamais un signal complet, donc l'adresse n'était pas sûre. Rapprochez la télécommande de Homey et réessayez."
   },
   "calibrate": {
     "title": "Calibrer la luminosité",

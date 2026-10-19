@@ -156,28 +156,60 @@ Offering the light as on/off plus brighter/dimmer actions reports only what is t
 
 ## Bit 24
 
-Bit 24 is `0` in all sixteen codes, and bits 0-23 hold an even number of ones in all sixteen. So
-the bit is consistent with **even parity over the preceding 24**, and equally consistent with being
-a constant zero. Nothing in 33 recordings separates the two: it would take a command whose first 24
-bits are odd, and this handset has none.
+**Bit 24 is not parity. It is not a constant zero either. What it is remains unknown.**
 
-It is not academic. The app learns the address from the user's own handset, and a different handset
-with an odd-weight address would need bit 24 set. **Compute it as even parity.** On this handset
-that yields `0` for every command — bit-for-bit what was recorded, so it costs nothing here — and
-it is far more likely to be right elsewhere than hardcoding zero.
+Across the 33 recordings the bit is `0` in all sixteen codes, and bits 0-23 hold an even number of
+ones in all sixteen — so it was consistent with **even parity over the preceding 24** and equally
+consistent with a constant zero, and nothing in those recordings separated the two. The call was
+even parity, on the grounds that it reproduced every recording exactly and would be likelier to be
+right on a handset whose address had odd weight.
 
-**It is also what recovers a dropped leading bit**, which is the second and stronger argument for
-computing it: see "Receiving" below. Under the constant-zero rule that recovery would be wrong on an
-odd-weight address, and the frame would be rejected by the device rather than acted on.
+**The radio disproved it.** With the receiver on all day, frames arrived in their thousands reading
 
-**On receive the bit is otherwise reported rather than enforced**, which is the asymmetry that keeps
-the choice from mattering. An odd-weight handset is the one place the two candidates differ, so
-rejecting a mismatch would make exactly that handset impossible to pair, and would say so as
-"couldn't find your handset". Accepting it keeps the app working whichever rule holds, and the
-driver's log line is the one piece of evidence that would settle the question: a received frame
-whose bit 24 is not even parity means the bit is a constant zero. Parity adds a single bit of
-discrimination over the length, selector and command tail, so nothing is lost by not insisting on
-it.
+```
+rx light.onoff with bit 24 set where even parity wants 0
+rx fan.speed.5 with bit 24 set where even parity wants 0
+```
+
+That message can only mean two things at once: bits 0-23 held an **even** number of ones, and bit 24
+was **1**. Even parity forbids the combination, and so does a constant zero. Both candidates are
+gone.
+
+An odd-weight address does not explain it either, which is worth stating because it was the
+predicted escape: an odd-weight address under even parity gives bit 24 `1` *and* agreement, so such
+a frame logs nothing at all.
+
+### What it probably is
+
+These frames came from a transmitter whose address is not the paired one — the fan device never
+mirrored them, so `sameAddress` rejected every one. This household has more than one Lucci fan. The
+likeliest reading is therefore that **bit 24 identifies the handset or the fitting**, a 25th bit of
+addressing rather than a check over the 24 before it, and that this household's two handsets differ
+in it. That would also settle, in the affirmative, the caveat below about a field that identifies
+*this* handset: there is now evidence of a per-unit bit, just not of what else it might encode.
+
+It is a reading and not a finding. Settling it needs the second handset's own recordings, which
+would show whether its bit 24 is constant across all sixteen of its commands — that is the test, and
+it is the same test the first handset was put to.
+
+### What the app does about it
+
+- **Transmitting still computes even parity**, which for the paired handset yields `0` for every
+  command and is bit-for-bit what was recorded. It works because this handset's bit 24 is `0`, not
+  because the rule is right. **A fan whose bit 24 is `1` cannot be driven by this app**: it would
+  receive `0` where it expects `1`. Learning bit 24 at pair time, alongside the address, is the fix.
+- **Receiving reports the disagreement and acts on the frame anyway.** That decision was made before
+  any of this was known, on the grounds that parity adds a single bit of discrimination over the
+  length, the selector and the command tail, and that enforcing it could make a handset unpairable.
+  It is why the app kept working through the discovery instead of going deaf on an unexplained bit.
+- **A dropped leading bit is no longer recoverable.** It used to be, exactly: `R = F[1..24]`, so
+  `F[0] = R[23] XOR (R[0] ... R[22])` restored address bit 0 from the parity bit. With parity gone
+  that is a coin toss on one address bit, so such a frame is marked `addressSure: false` and every
+  caller that decides whose frame it is refuses it — pairing, and both devices' receive paths. The
+  command is still named in the log, which costs nothing and is occasionally useful.
+- **The log that found it is throttled now**, with the payload and the address attached. The first
+  version carried neither, which is precisely what made "second handset" and "broken rule"
+  indistinguishable for a day.
 
 ## Receiving
 
@@ -224,16 +256,13 @@ shows in the first few preamble positions. Read as though the *trailing* bit wer
 symbols decode as selector `01` and command `010100`: a light button that does not exist. That is
 exactly what the driver's unrecognised-frame log reported, and it is what the log line is for.
 
-**A dropped leading bit is exactly recoverable from the parity bit.** With `F` the real frame and
-`R` what arrived, `R = F[1..24]`, so `R[23]` is parity and
-
-```
-F[0] = R[23] XOR (R[0] XOR ... XOR R[22])
-```
-
-Verified against the frame above: it restores address bit `0`, and the completed frame is
-bit-for-bit what the app transmits for that button. Both readings are tried, the leading one first
-because it is the one observed here.
+**A dropped leading bit was briefly recoverable from the parity bit** — `R = F[1..24]`, so
+`F[0] = R[23] XOR (R[0] ... R[22])` — and that recovery was verified against the frame above,
+restoring address bit `0` exactly. It rested entirely on bit 24 being parity, which it is not; see
+"Bit 24". The guess is still made, because it is right whenever the transmitter's bit 24 is `0` and
+because naming the command in a log costs nothing, but the frame is marked `addressSure: false` and
+every caller that decides identity refuses it. Both truncations are still tried: the trailing one
+loses only bit 24, which the app uses nothing from, so those frames identify as firmly as full ones.
 
 The cost is that 24 symbols discriminate less than 25, since two 8-bit windows are each held against
 the sixteen known tails rather than one. A pattern that is not ours can shift into one that is — but
@@ -253,6 +282,12 @@ matched fan.off on a full frame; address: 0101110011110011
 
 Both of those were flagged as the start of a burst, so the pairing view counted two signals for one
 press. That is why its label reads "Signals heard" rather than presses.
+
+**Pairing now requires the full frame rather than merely preferring it**, since the restored one's
+address bit 0 became a guess. On this receiver that costs nothing — the full-length twin arrives
+within the same press — and it makes a receiver that only ever delivers 24 symbols unpairable, which
+is the better failure: it is loud and says so, where a guessed address gives a device that is added,
+looks right and never works.
 
 **Homey does not hear its own transmissions.** Checked with the receiver on for the life of the
 device and a dozen commands sent: no received frame followed any of them. That matters less to the
