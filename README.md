@@ -11,7 +11,18 @@ needs no hub, no bridge and no account:
 
 ## Status
 
-**Phase 1 is done: the protocol is settled.** No app yet — the drivers come next.
+**The protocol is settled, and the app transmits nothing yet.**
+
+The fan driver and the pairing flow are written, but no frame has ever been put on air: every code
+here comes from listening to the handset. The first hardware test is the next step, and the first
+real risk — see [`APP_PLAN.md`](APP_PLAN.md) for what to try if the fan does not respond.
+
+| | |
+|---|---|
+| protocol, frame building, identification | [`lib/lucci-protocol.js`](lib/lucci-protocol.js) |
+| fan driver — `onoff` and speed, transmit only | [`drivers/fan/`](drivers/fan) |
+| pairing — learns the address off your own handset | [`drivers/fan/pair/learn.html`](drivers/fan/pair/learn.html) |
+| still to come | direction, timer, receiving, the light, flow cards |
 
 - [`RF_PROTOCOL.md`](RF_PROTOCOL.md) — the frame layout, all sixteen command codes, and what each
   control does. Reverse-engineered from 33 recordings covering every button.
@@ -25,7 +36,8 @@ needs no hub, no bridge and no account:
 
 ```bash
 npm run analyse        # read captures/raw-captures.txt
-npm test               # 38 tests, no hardware or captures needed
+npm test               # 69 tests; the capture tests skip without a recording
+homey app validate     # --level verified passes
 ```
 
 The analyser assumes nothing about the protocol; it infers the structure from the durations. It is

@@ -1,0 +1,175 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const {
+    ADDRESS_LENGTH, HEAD_LENGTH, FRAME_LENGTH, RX_FRAME_LENGTH,
+    COMMANDS, COMMAND_KEYS, FAN_SPEEDS, FAN_DIRECTIONS, FAN_TIMERS,
+    evenParity, buildFrame, identifyFrame, describeFrame, sameAddress,
+} = require('../lib/lucci-protocol');
+
+// captures.test.js holds the table against the recordings. This file covers
+// what one handset's recordings cannot: an address of odd weight, frames the
+// handset never sends, and the lengths Homey may hand back.
+
+// The handset the protocol was decoded from. Even weight, like every one of its
+// sixteen frames.
+const HANDSET = '0101110011110011'.split('').map(Number);
+
+// An address with an odd number of ones, which this handset does not have and
+// no recording can therefore exercise. Every command from it needs bit 24 set.
+const ODD = '0101110011110001'.split('').map(Number);
+
+test('the table holds all sixteen commands, and no two share a code', () => {
+    assert.equal(COMMANDS.length, 16);
+    assert.equal(COMMAND_KEYS.length, 16);
+    assert.equal(new Set(COMMAND_KEYS).size, 16, 'keys are unique');
+
+    const tails = COMMAND_KEYS.map(key => buildFrame(HANDSET, key)
+        .slice(ADDRESS_LENGTH, HEAD_LENGTH).join(''));
+    assert.equal(new Set(tails).size, 16, 'selector and command together are unique');
+});
+
+test('the capability values come from the table', () => {
+    // A picker offering a value the table has no code for would look like a
+    // working control and do nothing.
+    assert.deepEqual(FAN_SPEEDS, ['0', '1', '2', '3', '4', '5']);
+    assert.deepEqual(FAN_DIRECTIONS, ['forward', 'reverse']);
+    assert.deepEqual(FAN_TIMERS, ['off', '2h', '4h', '8h']);
+});
+
+test('a frame is the address, then the 9-bit tail', () => {
+    const frame = buildFrame(HANDSET, 'fan.speed.3');
+
+    assert.equal(frame.length, FRAME_LENGTH);
+    assert.deepEqual(frame.slice(0, ADDRESS_LENGTH), HANDSET);
+    assert.equal(frame.slice(ADDRESS_LENGTH).join(''), '100010110');
+});
+
+test('bit 24 is computed, so an odd-weight address sets it', () => {
+    // The whole reason the bit is computed rather than copied. On this handset
+    // every command comes out with it clear — bit-for-bit what was recorded —
+    // and on a handset whose address has odd weight every command needs it set.
+    // 33 recordings cannot separate even parity from a constant zero; this is
+    // the behaviour that would differ if the choice were wrong.
+    for (const key of COMMAND_KEYS) {
+        assert.equal(buildFrame(HANDSET, key)[HEAD_LENGTH], 0, `${key} from an even address`);
+        assert.equal(buildFrame(ODD, key)[HEAD_LENGTH], 1, `${key} from an odd address`);
+    }
+
+    assert.equal(evenParity([]), 0);
+    assert.equal(evenParity([1, 1, 0]), 0);
+    assert.equal(evenParity([1, 1, 1]), 1);
+});
+
+test('every built frame identifies back to the command that built it', () => {
+    for (const key of COMMAND_KEYS) {
+        for (const address of [HANDSET, ODD]) {
+            const frame = buildFrame(address, key);
+            const found = identifyFrame(frame);
+
+            assert.notEqual(found, null, `${key} did not identify`);
+            assert.equal(found.key, key);
+            assert.deepEqual(found.address, address);
+            assert.equal(describeFrame(frame), key);
+        }
+    }
+});
+
+test('identifyFrame names the field as well as the command', () => {
+    const light = identifyFrame(buildFrame(HANDSET, 'light.dimmer'));
+    assert.deepEqual(light, {
+        address: HANDSET, domain: 'light', command: 'dimmer', value: null, key: 'light.dimmer',
+        parityOk: true,
+    });
+
+    const speed = identifyFrame(buildFrame(HANDSET, 'fan.speed.4'));
+    assert.deepEqual(speed, {
+        address: HANDSET, domain: 'fan', command: 'speed', value: '4', key: 'fan.speed.4',
+        parityOk: true,
+    });
+});
+
+test('a 24-symbol frame is identified, its parity never having arrived', () => {
+    // Insurance, not an observation: this handset does transmit the last bit's
+    // gap, so Homey ought to deliver 25. The sibling Bear handset does not, and
+    // there requiring the full length made the app completely deaf while
+    // looking like a radio fault. Nothing is lost by accepting 24, because the
+    // parity bit is recomputed on transmit rather than carried over.
+    for (const key of COMMAND_KEYS) {
+        const short = buildFrame(ODD, key).slice(0, RX_FRAME_LENGTH);
+        assert.equal(short.length, 24);
+
+        const found = identifyFrame(short);
+        assert.notEqual(found, null, `${key} did not identify at 24 symbols`);
+        assert.equal(found.key, key);
+        assert.deepEqual(buildFrame(found.address, found.key), buildFrame(ODD, key));
+    }
+});
+
+test('a frame whose parity is wrong is reported, not rejected', () => {
+    // Rejecting it would make a handset whose address has odd weight impossible
+    // to pair — and that is exactly the handset on which even parity and a
+    // constant zero differ, so it is the one case where the unresolved bit
+    // matters. A frame like this is evidence that bit 24 is a constant zero, and
+    // the driver logs it; it is not evidence that the frame belongs to someone
+    // else, which is what the length, selector and tail are for.
+    const frame = buildFrame(ODD, 'fan.off');
+    const flipped = [...frame.slice(0, HEAD_LENGTH), frame[HEAD_LENGTH] ^ 1];
+
+    const found = identifyFrame(flipped);
+    assert.notEqual(found, null);
+    assert.equal(found.key, 'fan.off');
+    assert.equal(found.parityOk, false);
+    assert.match(describeFrame(flipped), /parity 0 where 1 was expected/);
+
+    // And a frame that does agree says so, while a short one cannot.
+    assert.equal(identifyFrame(frame).parityOk, true);
+    assert.equal(identifyFrame(frame.slice(0, RX_FRAME_LENGTH)).parityOk, null);
+});
+
+test('an unrelated 433 MHz frame is not mistaken for the handset', () => {
+    // This is what stops pairing latching onto whatever else is in range: the
+    // length, the selector and the command tail all have to fit.
+    const selector = bits => [...HANDSET, ...bits, 0, 0, 0, 1, 0, 0];
+    const wrongLength = buildFrame(HANDSET, 'fan.off').slice(0, 20);
+
+    for (const payload of [null, undefined, 'fan.off', [], wrongLength]) {
+        assert.equal(identifyFrame(payload), null);
+    }
+
+    // 00 and 11 were never seen, and a frame carrying either is not ours.
+    for (const bits of [[0, 0], [1, 1]]) {
+        assert.equal(identifyFrame(selector(bits)), null);
+        assert.match(describeFrame(selector(bits)), /neither fan \(10\) nor light \(01\)/);
+    }
+
+    // A selector we know with a command we do not: the seventeenth button,
+    // which cannot be synthesised and so cannot be sent either.
+    const unknown = [...HANDSET, 1, 0, 1, 1, 1, 1, 1, 1];
+    assert.equal(identifyFrame(unknown), null);
+    assert.match(describeFrame(unknown), /fan, unimplemented command 111111/);
+
+    assert.equal(describeFrame([...HANDSET, 1, 0, 2, 0, 0, 0, 0, 0]), 'not bits');
+    assert.match(describeFrame(wrongLength), /20 symbols, expected 24 or 25/);
+});
+
+test('buildFrame refuses what it cannot build rather than sending nonsense', () => {
+    // An unknown key or a missing address would otherwise spread `undefined`
+    // into the payload and fail deep inside tx() with nothing to point at.
+    assert.throws(() => buildFrame(HANDSET, 'fan.speed.6'), /Unknown command: fan\.speed\.6/);
+    assert.throws(() => buildFrame(HANDSET, 'fan.on'), /Unknown command: fan\.on/);
+    assert.throws(() => buildFrame(HANDSET, undefined), /Unknown command/);
+    assert.throws(() => buildFrame(HANDSET.slice(1), 'fan.off'), /Bad address/);
+    assert.throws(() => buildFrame(null, 'fan.off'), /Bad address/);
+    assert.throws(() => buildFrame(HANDSET.map(() => 2), 'fan.off'), /Bad address/);
+});
+
+test('sameAddress tells one household\'s handset from another\'s', () => {
+    assert.equal(sameAddress(HANDSET, [...HANDSET]), true);
+    assert.equal(sameAddress(HANDSET, ODD), false);
+    assert.equal(sameAddress(HANDSET, HANDSET.slice(1)), false);
+    assert.equal(sameAddress(HANDSET, null), false);
+    assert.equal(sameAddress(undefined, undefined), false);
+});

@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "not_paired": "Füge diesen Ventilator erneut hinzu, damit Homey deinen Handsender lernen kann."
+  },
+  "pair": {
+    "title": "Ventilator hinzufügen",
+    "listening": "Drücke eine Taste auf deinem Handsender",
+    "listening_hint": "Halte den Lucci-Handsender neben Homey und drücke eine beliebige Taste, damit Homey erkennt, zu welchem Ventilator er gehört.",
+    "heard": "Empfangene Signale:",
+    "found": "Handsender gefunden",
+    "failed": "Handsender nicht gefunden",
+    "timeout": "Homey hat keinen Tastendruck eines Lucci-Handsenders gehört. Bringe den Handsender näher an Homey und versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "found_hint": "Füge nun deinen Ventilator hinzu. Homey kann ihm dieselben Codes senden wie der Handsender — der Ventilator meldet aber nichts zurück, daher zeigt Homey, was zuletzt gesendet oder mitgehört wurde.",
+    "not_learned": "Homey hat deinen Handsender noch nicht gelernt. Gehe zurück und drücke eine Taste."
+  }
+}

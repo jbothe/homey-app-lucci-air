@@ -164,6 +164,15 @@ with an odd-weight address would need bit 24 set. **Compute it as even parity.**
 that yields `0` for every command — bit-for-bit what was recorded, so it costs nothing here — and
 it is far more likely to be right elsewhere than hardcoding zero.
 
+**On receive the bit is reported rather than enforced**, which is the asymmetry that keeps the
+choice from mattering. An odd-weight handset is the one place the two candidates differ, so
+rejecting a mismatch would make exactly that handset impossible to pair, and would say so as
+"couldn't find your handset". Accepting it keeps the app working whichever rule holds, and the
+driver's log line is the one piece of evidence that would settle the question: a received frame
+whose bit 24 is not even parity means the bit is a constant zero. Parity adds a single bit of
+discrimination over the length, selector and command tail, so nothing is lost by not insisting on
+it.
+
 ## Receiving
 
 Four things are needed, all carried over from the sibling

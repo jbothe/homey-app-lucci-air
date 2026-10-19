@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "not_paired": "Ajoutez ce ventilateur à nouveau pour que Homey puisse apprendre votre télécommande."
+  },
+  "pair": {
+    "title": "Ajouter un ventilateur",
+    "listening": "Appuyez sur une touche de votre télécommande",
+    "listening_hint": "Tenez la télécommande Lucci près de Homey et appuyez sur n'importe quelle touche, pour que Homey sache à quel ventilateur elle appartient.",
+    "heard": "Signaux entendus :",
+    "found": "Télécommande trouvée",
+    "failed": "Télécommande introuvable",
+    "timeout": "Homey n'a entendu aucun appui sur une télécommande Lucci. Rapprochez la télécommande de Homey et réessayez.",
+    "retry": "Réessayer",
+    "found_hint": "Ajoutez maintenant votre ventilateur. Homey peut lui envoyer les mêmes codes que la télécommande — mais le ventilateur ne renvoie rien, donc Homey affiche ce qu'il a commandé ou entendu en dernier.",
+    "not_learned": "Homey n'a pas encore appris votre télécommande. Revenez en arrière et appuyez sur une touche."
+  }
+}

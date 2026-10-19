@@ -14,9 +14,9 @@ Two devices rather than one, because they are two things to a user and to Homey:
 `light`, each wanting its own tile, its own flow cards and its own voice control.
 
 ```
-drivers/lib/lucci-protocol.js    the sixteen codes, frame building, identification
-drivers/fan/                     class "fan"
-drivers/light/                   class "light"
+lib/lucci-protocol.js    the sixteen codes, frame building, identification
+drivers/fan/             class "fan"
+drivers/light/           class "light"
 ```
 
 ## Fan capabilities

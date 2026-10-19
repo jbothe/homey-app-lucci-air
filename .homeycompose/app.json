@@ -1,0 +1,45 @@
+{
+  "id": "com.lucci.fan",
+  "version": "0.1.0",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "brandColor": "#1E1E1E",
+  "name": {
+    "en": "Lucci"
+  },
+  "description": {
+    "en": "Ceiling fans that answer to Homey as well as the handset.",
+    "nl": "Plafondventilatoren die naar Homey luisteren, net als naar de handzender.",
+    "de": "Deckenventilatoren, die auf Homey ebenso hören wie auf die Handsteuerung.",
+    "fr": "Ventilateurs de plafond qui obéissent à Homey comme à la télécommande."
+  },
+  "tags": {
+    "en": ["lucci", "fan", "ceiling fan", "fan light", "remote", "handset", "433"],
+    "nl": ["lucci", "ventilator", "plafondventilator", "ventilatorlamp", "afstandsbediening", "handzender", "433"],
+    "de": ["lucci", "ventilator", "deckenventilator", "ventilatorlampe", "fernbedienung", "handsender", "433"],
+    "fr": ["lucci", "ventilateur", "ventilateur de plafond", "lampe de ventilateur", "télécommande", "433"]
+  },
+  "category": [
+    "climate"
+  ],
+  "permissions": [
+    "homey:wireless:433"
+  ],
+  "images": {
+    "small": "/assets/images/small.jpg",
+    "large": "/assets/images/large.jpg",
+    "xlarge": "/assets/images/xlarge.jpg"
+  },
+  "author": {
+    "name": "John Bothe",
+    "email": "jbothe@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/jbothe/homey-app-lucci/issues"
+  },
+  "support": "https://github.com/jbothe/homey-app-lucci/issues",
+  "source": "https://github.com/jbothe/homey-app-lucci"
+}

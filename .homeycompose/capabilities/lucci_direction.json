@@ -1,0 +1,22 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Direction",
+    "nl": "Draairichting",
+    "de": "Drehrichtung",
+    "fr": "Sens de rotation"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker",
+  "values": [
+    {
+      "id": "forward",
+      "title": { "en": "Forward", "nl": "Vooruit", "de": "Vorwärts", "fr": "Avant" }
+    },
+    {
+      "id": "reverse",
+      "title": { "en": "Reverse", "nl": "Achteruit", "de": "Rückwärts", "fr": "Arrière" }
+    }
+  ]
+}

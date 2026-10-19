@@ -1,0 +1,325 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.lucci.fan",
+  "version": "0.1.0",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "brandColor": "#1E1E1E",
+  "name": {
+    "en": "Lucci"
+  },
+  "description": {
+    "en": "Ceiling fans that answer to Homey as well as the handset.",
+    "nl": "Plafondventilatoren die naar Homey luisteren, net als naar de handzender.",
+    "de": "Deckenventilatoren, die auf Homey ebenso hören wie auf die Handsteuerung.",
+    "fr": "Ventilateurs de plafond qui obéissent à Homey comme à la télécommande."
+  },
+  "tags": {
+    "en": [
+      "lucci",
+      "fan",
+      "ceiling fan",
+      "fan light",
+      "remote",
+      "handset",
+      "433"
+    ],
+    "nl": [
+      "lucci",
+      "ventilator",
+      "plafondventilator",
+      "ventilatorlamp",
+      "afstandsbediening",
+      "handzender",
+      "433"
+    ],
+    "de": [
+      "lucci",
+      "ventilator",
+      "deckenventilator",
+      "ventilatorlampe",
+      "fernbedienung",
+      "handsender",
+      "433"
+    ],
+    "fr": [
+      "lucci",
+      "ventilateur",
+      "ventilateur de plafond",
+      "lampe de ventilateur",
+      "télécommande",
+      "433"
+    ]
+  },
+  "category": [
+    "climate"
+  ],
+  "permissions": [
+    "homey:wireless:433"
+  ],
+  "images": {
+    "small": "/assets/images/small.jpg",
+    "large": "/assets/images/large.jpg",
+    "xlarge": "/assets/images/xlarge.jpg"
+  },
+  "author": {
+    "name": "John Bothe",
+    "email": "jbothe@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/jbothe/homey-app-lucci/issues"
+  },
+  "support": "https://github.com/jbothe/homey-app-lucci/issues",
+  "source": "https://github.com/jbothe/homey-app-lucci",
+  "drivers": [
+    {
+      "id": "fan",
+      "name": {
+        "en": "Ceiling fan",
+        "nl": "Plafondventilator",
+        "de": "Deckenventilator",
+        "fr": "Ventilateur de plafond"
+      },
+      "images": {
+        "large": "/drivers/fan/assets/images/large.png",
+        "small": "/drivers/fan/assets/images/small.png"
+      },
+      "class": "fan",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "rf433"
+      ],
+      "rf433": {
+        "satelliteMode": true
+      },
+      "capabilities": [
+        "onoff",
+        "lucci_speed"
+      ],
+      "capabilitiesOptions": {
+        "lucci_speed": {
+          "preventInsights": true
+        }
+      },
+      "pair": [
+        {
+          "id": "learn",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "lucci_direction": {
+      "type": "enum",
+      "title": {
+        "en": "Direction",
+        "nl": "Draairichting",
+        "de": "Drehrichtung",
+        "fr": "Sens de rotation"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "forward",
+          "title": {
+            "en": "Forward",
+            "nl": "Vooruit",
+            "de": "Vorwärts",
+            "fr": "Avant"
+          }
+        },
+        {
+          "id": "reverse",
+          "title": {
+            "en": "Reverse",
+            "nl": "Achteruit",
+            "de": "Rückwärts",
+            "fr": "Arrière"
+          }
+        }
+      ]
+    },
+    "lucci_speed": {
+      "type": "enum",
+      "title": {
+        "en": "Fan speed",
+        "nl": "Ventilatorsnelheid",
+        "de": "Lüftergeschwindigkeit",
+        "fr": "Vitesse du ventilateur"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "0",
+          "title": {
+            "en": "Lowest",
+            "nl": "Laagst",
+            "de": "Niedrigste",
+            "fr": "Minimale"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "Low",
+            "nl": "Laag",
+            "de": "Niedrig",
+            "fr": "Faible"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "Medium-low",
+            "nl": "Middellaag",
+            "de": "Mittelniedrig",
+            "fr": "Moyen-faible"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "Medium-high",
+            "nl": "Middelhoog",
+            "de": "Mittelhoch",
+            "fr": "Moyen-élevé"
+          }
+        },
+        {
+          "id": "4",
+          "title": {
+            "en": "High",
+            "nl": "Hoog",
+            "de": "Hoch",
+            "fr": "Élevé"
+          }
+        },
+        {
+          "id": "5",
+          "title": {
+            "en": "Highest",
+            "nl": "Hoogst",
+            "de": "Höchste",
+            "fr": "Maximale"
+          }
+        }
+      ]
+    },
+    "lucci_timer": {
+      "type": "enum",
+      "title": {
+        "en": "Timer",
+        "nl": "Timer",
+        "de": "Timer",
+        "fr": "Minuteur"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "off",
+          "title": {
+            "en": "Off",
+            "nl": "Uit",
+            "de": "Aus",
+            "fr": "Désactivé"
+          }
+        },
+        {
+          "id": "2h",
+          "title": {
+            "en": "2 hours",
+            "nl": "2 uur",
+            "de": "2 Stunden",
+            "fr": "2 heures"
+          }
+        },
+        {
+          "id": "4h",
+          "title": {
+            "en": "4 hours",
+            "nl": "4 uur",
+            "de": "4 Stunden",
+            "fr": "4 heures"
+          }
+        },
+        {
+          "id": "8h",
+          "title": {
+            "en": "8 hours",
+            "nl": "8 uur",
+            "de": "8 Stunden",
+            "fr": "8 heures"
+          }
+        }
+      ]
+    }
+  },
+  "signals": {
+    "433": {
+      "lucci": {
+        "sof": [
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497,
+          590,
+          497
+        ],
+        "words": [
+          [
+            295,
+            797
+          ],
+          [
+            790,
+            301
+          ]
+        ],
+        "interval": 9448,
+        "sensitivity": 0.2,
+        "repetitions": 9,
+        "minimalLength": 24,
+        "maximalLength": 25,
+        "rxTimeout": 255
+      }
+    }
+  }
+}

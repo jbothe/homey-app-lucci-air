@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "not_paired": "Voeg deze ventilator opnieuw toe, zodat Homey je handzender kan leren."
+  },
+  "pair": {
+    "title": "Ventilator toevoegen",
+    "listening": "Druk op een knop van je handzender",
+    "listening_hint": "Houd de Lucci-handzender bij Homey en druk op een willekeurige knop, zodat Homey weet bij welke ventilator hij hoort.",
+    "heard": "Signalen gehoord:",
+    "found": "Handzender gevonden",
+    "failed": "Handzender niet gevonden",
+    "timeout": "Homey heeft geen druk op een Lucci-handzender gehoord. Houd de handzender dichter bij Homey en probeer het opnieuw.",
+    "retry": "Opnieuw proberen",
+    "found_hint": "Voeg nu je ventilator toe. Homey kan hem dezelfde codes sturen als de handzender — maar de ventilator meldt niets terug, dus wat Homey toont is wat hij als laatste heeft gestuurd of meegehoord.",
+    "not_learned": "Homey heeft je handzender nog niet geleerd. Ga terug en druk op een knop."
+  }
+}

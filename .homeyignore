@@ -1,0 +1,11 @@
+node_modules
+.git
+.github
+.homeycompose
+.DS_Store
+APP_PLAN.md
+CAPTURE_GUIDE.md
+RF_PROTOCOL.md
+captures
+test
+tools
