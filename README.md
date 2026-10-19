@@ -19,7 +19,7 @@ the protocol is no longer a hypothesis.
 |---|---|
 | protocol, frame building, identification | [`lib/lucci-protocol.js`](lib/lucci-protocol.js) |
 | fan driver — `onoff` and speed, **confirmed on the hardware** | [`drivers/fan/`](drivers/fan) |
-| direction and timer — written, never transmitted | [`drivers/fan/device.js`](drivers/fan/device.js) |
+| direction and timer — **confirmed on the hardware** | [`drivers/fan/device.js`](drivers/fan/device.js) |
 | follows the handset, so Homey is not left guessing | [`drivers/fan/device.js`](drivers/fan/device.js) |
 | pairing — learns the address off your own handset | [`drivers/fan/pair/learn.html`](drivers/fan/pair/learn.html) |
 | still to come | the light, flow cards, store assets |
@@ -28,7 +28,7 @@ Because speed, direction and the timer are absolute — the handset sends the st
 not "faster" — a frame Homey overhears gives the exact state rather than a hint. So using the
 handset keeps Homey honest instead of putting it out of step.
 
-Direction, the timer and the light are built from the same tables but have not been sent yet.
+Every fan code has now been commanded from Homey and answered. Only the light's three are unsent.
 Receiving is how the receiver's habit of dropping a burst's first bit turned up — see "Receiving"
 in [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
 

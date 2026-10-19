@@ -93,13 +93,25 @@ class LucciFanDevice extends Homey.Device {
         // "off and reverse" means, which the protocol does not answer — the
         // handset has no such combination.
         //
-        // Neither implies `onoff`. A speed code starts the fan, confirmed on the
-        // hardware; whether a direction or timer code does is not known, and
-        // guessing would put the tile ahead of the fan in the one direction a
-        // user cannot correct by looking. The hardware test should settle it.
+        // **A direction code starts a stopped fan**, confirmed on the hardware,
+        // so it implies `onoff` true exactly as a speed code does — through
+        // `reflect`, because this is the pitfall that cost a round trip once
+        // already: writing a capability from inside another's listener.
+        //
+        // What speed it starts at is a different matter and not knowable. The
+        // fan picks one, nothing reports it, and no speed code was sent — so
+        // `lucci_speed` after a direction-started start is Homey's last guess
+        // rather than a fact. The next speed command or overheard press fixes
+        // it, which is the best available and worth knowing about.
         this.registerCapabilityListener('lucci_direction', async value => {
             await this.send(`fan.direction.${value}`, 'lucci_direction');
+            await this.reflect({ onoff: true }, { lucci_direction: value });
         });
+
+        // The timer implies nothing, because whether it starts a stopped fan has
+        // not been tested — and a direction code's doing so is no evidence about
+        // it. Guessing wrong here shows the fan on while it is off, which is the
+        // mirror of the bug that had the tile stuck off while it ran.
         this.registerCapabilityListener('lucci_timer', async value => {
             await this.send(`fan.timer.${value}`, 'lucci_timer');
         });

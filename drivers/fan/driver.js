@@ -176,11 +176,16 @@ class LucciFanDriver extends Homey.Driver {
                 };
 
                 listener = (frame, isFirst) => {
-                    // Each press is transmitted nine times; count it once, so
-                    // the number on screen means presses. Every frame is still
-                    // considered below, because the full-length one can arrive
-                    // as a later frame of the same burst — which on the observed
-                    // hardware is exactly what it does.
+                    // Counted per frame Homey reports as the start of a burst,
+                    // which is not the same as per press: on this receiver one
+                    // press of Fan Off came through as a restored frame and then
+                    // a full one 70ms later, both flagged first, and the view
+                    // showed two. That is why the view's label says signals
+                    // rather than presses — two signals is what was heard.
+                    //
+                    // Every frame is considered below either way, because the
+                    // full-length one can arrive as a later frame of the same
+                    // burst.
                     if (isFirst !== false) {
                         heard += 1;
                         log(`heard #${heard}: ${frame.key}`);

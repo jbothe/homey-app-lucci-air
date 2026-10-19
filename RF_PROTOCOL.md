@@ -239,9 +239,25 @@ The cost is that 24 symbols discriminate less than 25, since two 8-bit windows a
 the sixteen known tails rather than one. A pattern that is not ours can shift into one that is — but
 it reaches the bit check only after matching the preamble, both symbol windows at 0.2 tolerance, the
 interval and the length, and a frame carrying the wrong address is then rejected by the device. The
-one place it is not is pairing, which keeps whatever address the first recognised frame carries. In
-practice the full-length frame arrives within 40ms of the press, so pairing could be made to prefer
-one; it has not been, and this is the reason it might be.
+one place it is not is pairing, which has no stored address to check against — it is what
+establishes one.
+
+So **pairing prefers a full-length frame**: it holds a reconstructed one briefly and takes a full one
+if it arrives. Observed doing exactly that on the hardware — a restored frame, then the full frame
+70ms later, which won:
+
+```
+matched fan.off on a restored frame; holding 750ms for a full one
+matched fan.off on a full frame; address: 0101110011110011
+```
+
+Both of those were flagged as the start of a burst, so the pairing view counted two signals for one
+press. That is why its label reads "Signals heard" rather than presses.
+
+**Homey does not hear its own transmissions.** Checked with the receiver on for the life of the
+device and a dozen commands sent: no received frame followed any of them. That matters less to the
+fan, whose commands are all absolute, than to the light, whose brighter and dimmer are relative — an
+echo there would have counted every press twice.
 
 ## Addressing and pairing
 
@@ -292,17 +308,19 @@ preamble mismatches confined to the first four positions — that is, to the art
 - **"Up at maximum" rests on one clean frame.** It repeats step 5, so the ladder appears to top out
   rather than wrap, but that is the weakest claim here. It does not affect the app, which never
   needs to send a relative step.
-- **The fan's power and speed codes have been sent; nothing else has.** Confirmed on the hardware:
-  pairing, the off code, and speed steps 0, 1, 2, 3 and 5 — each setting the fan to the step asked
-  for, from standing and while already running. Step 4 is the only speed not yet sent, and it sits
-  between two that were. The two direction codes and the four timer codes are now **wired to
-  capabilities but have never been transmitted**, and the three light codes are not wired at all.
-  All nine are built the same way from the same tables, which is good reason to expect them to work
-  and not evidence that they do.
-- **Whether a direction or timer code starts a stopped fan is unknown.** A speed code does, which is
-  confirmed. The app therefore implies nothing from the other two: it would be putting the tile
-  ahead of the fan in the one direction a user cannot correct by looking at it. The first hardware
-  test of those codes should press them with the fan stopped and say what happens.
+- **Every fan code has now been sent, and the fan answered all of them.** Pairing, the off code,
+  five of the six speed steps, both direction codes and all four timer states — commanded from
+  Homey, and each doing what the table says. Speed step 4 is the only code never transmitted, and it
+  sits between two that were. **The three light codes remain unsent**, built the same way from the
+  same tables, which is reason to expect them to work and not evidence that they do.
+- **A direction code starts a stopped fan**, confirmed, so it is a power command as much as a
+  setting. **Whether a timer code does is still unknown** — it has only been sent to a fan already
+  running, and a direction code's behaviour is no evidence about it.
+- **What speed the fan starts at when a direction code starts it is unknown and unknowable.** The
+  fan picks one, nothing reports it, and no speed code was involved. So Homey's speed is a guess
+  from that moment until the next speed command or overheard press. This is the one place the app
+  knowingly shows something it cannot stand behind, and the alternative — sending a speed code
+  alongside, to force the matter — would override a choice the user did not make.
 - **A speed code starts the fan from off**, which the handset's behaviour implied and the radio now
   confirms. It is what makes Homey's asymmetric `onoff` honest: there is no "fan on" code, and
   sending a speed is how the fan is started.

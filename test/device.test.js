@@ -262,23 +262,37 @@ test('direction and the timer get a listener each, not the coupled one', async (
     assert.deepEqual(fan.multiListener.ids, ['onoff', 'lucci_speed']);
 });
 
-test('direction sends its code and implies nothing', async () => {
+test('direction starts a stopped fan, and the tile follows', async () => {
+    // Confirmed on the hardware: a direction code starts the fan, as a speed
+    // code does. So it implies onoff true, and through reflect, this being the
+    // pitfall that cost a round trip once already.
     const fan = await device({ speed: '2', onoff: false });
     await setOne(fan, 'lucci_direction', 'reverse');
 
     assert.deepEqual(keysSent(fan), ['fan.direction.reverse']);
-    // A speed code starts the fan, confirmed on the hardware. Whether a
-    // direction code does is not known, and guessing would put the tile ahead of
-    // the fan in the one direction a user cannot correct by looking.
-    assert.equal(fan.capabilityValues.onoff, false);
+    assert.equal(fan.capabilityValues.onoff, true);
+    assert.ok(fan.logs.some(line => line === 'onoff -> true'), fan.logs.join(' | '));
 });
 
-test('the timer sends its code and implies nothing', async () => {
+test('the timer implies nothing, not having been tested stopped', async () => {
+    // A direction code starting the fan is no evidence about a timer code.
+    // Guessing wrong here shows the fan on while it is off, the mirror of the
+    // bug that had the tile stuck off while it ran.
     const fan = await device({ speed: '2', onoff: false });
     await setOne(fan, 'lucci_timer', '8h');
 
     assert.deepEqual(keysSent(fan), ['fan.timer.8h']);
     assert.equal(fan.capabilityValues.onoff, false);
+});
+
+test('a direction change while the fan runs leaves onoff alone', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    await setOne(fan, 'lucci_direction', 'forward');
+
+    assert.deepEqual(keysSent(fan), ['fan.direction.forward']);
+    assert.equal(fan.capabilityValues.onoff, true);
+    // Nothing to write: reflect skips a capability that already holds the value.
+    assert.equal(fan.logs.filter(line => line === 'onoff -> true').length, 0);
 });
 
 test('every direction and timer value has a code that builds', async () => {

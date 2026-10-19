@@ -192,11 +192,15 @@ against itself.
    was the design's one real bet. Receiving also works, which was not being tested: a frame arrived
    and decoded on the first run, and it is what found the leading-bit truncation now handled in
    `completeFrame`.
-4. **Direction and timer** on the fan. **Written, and never transmitted.** Each gets a listener of
-   its own rather than joining the coupled pair: both are absolute, but neither shares a frame with
-   another capability, so there is nothing to pool. Neither implies `onoff`, because whether these
-   codes start a stopped fan is not known and a speed code's doing so is no evidence about them.
-5. **Receiving**, and state mirroring from the handset. **Written.** The device registers an RX
+4. **Direction and timer** on the fan. **Done, and both answered on the hardware.** Each gets a
+   listener of its own rather than joining the coupled pair: both are absolute, but neither shares a
+   frame with another capability, so there is nothing to pool. **A direction code starts a stopped
+   fan**, confirmed, so it implies `onoff` true the way a speed code does. The timer implies
+   nothing, having only ever been sent to a fan already running.
+5. **Receiving**, and state mirroring from the handset. **Done, and heard a real press** — one
+   handset press of speed 3 came through as `rx fan.speed.3 from the handset` and moved the tile,
+   which is the first thing in this app to change a capability without a user asking. The device
+   registers an RX
    listener and mirrors through `set`, not `reflect` — nothing is deferred because no capability
    listener is running on that path — and never through `triggerCapabilityListener`, which would
    transmit a received press back at the fan. Repeats of one press are collapsed over 2 seconds,
@@ -205,14 +209,10 @@ against itself.
    they carry the same address: they are ignored, and said once, since the light being audible is
    step 6's premise.
 
-   **Whether Homey hears its own transmissions is not yet known, and it matters most to the light.**
-   RX is now on for the life of the device rather than only during pairing, so if the receiver picks
-   up what the transmitter just sent, every command comes back as a received frame. For the fan that
-   is harmless — the mirrored value is the one just commanded, and every fan command is absolute —
-   but for the light's relative brighter and dimmer it would double-count every press and send the
-   `dim` estimate off by a factor of two. The hardware test settles it in one line: an `rx` entry
-   immediately after each `tx` means self-reception, and step 6 then has to ignore frames it can
-   attribute to its own transmission.
+   **Homey does not hear its own transmissions**, which was the open question here and the one that
+   mattered most to the light. Checked with the receiver on for the life of the device and a dozen
+   commands sent: no received frame followed any of them. So the light's `dim` tracking does not
+   have to filter its own presses out, which would otherwise have doubled every move it made.
 
    Pairing now **prefers a full-length frame** over a reconstructed one, holding a 24-symbol
    candidate 750ms for a 25-symbol frame before settling for it. Pairing is the one caller that
@@ -221,10 +221,10 @@ against itself.
    requirement, because a receiver that only ever delivered 24 symbols would otherwise be
    impossible to pair.
 6. **Light driver**: `onoff` and the two brightness buttons first — they need no state and no
-   timings. Two things carry over from step 5 and must not be inherited by accident: the fan's
+   timings. One thing carries over from step 5 and must not be inherited by accident: the fan's
    2-second repeat-collapsing window is safe only for absolute commands and would silently drop
-   steps here, and if the fan's first hardware test shows Homey hearing its own frames, the light
-   has to ignore its own transmissions or its `dim` estimate will count every press twice. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
+   steps here, where one press is one step. The other worry is settled — Homey does not hear its own
+   transmissions, so the slider need not filter its own presses out. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
    and a calibrate action.
 7. **Flow cards**, store assets, README and locales.
 
