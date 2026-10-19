@@ -216,7 +216,14 @@ against itself.
    frame with another capability, so there is nothing to pool. **A direction code starts a stopped
    fan**, confirmed, so it implies `onoff` true the way a speed code does. The timer implies
    nothing, having only ever been sent to a fan already running.
-5. **Receiving**, and state mirroring from the handset. **Done, and heard a real press** — one
+5. **Receiving**, and state mirroring from the handset. **The receiver belongs to the app**, not to
+   either driver: Homey's `enableRX` and `disableRX` act on the signal rather than on the caller, so
+   the count of who wants it has to be one count. It was one per driver until the light arrived, at
+   which point pairing a light finished by calling `disableRX` and left the fan deaf with its own
+   driver's count untouched — caught in the log on the first run with both drivers, four seconds
+   before a device init turned it back on.
+
+   **Done, and heard a real press** — one
    handset press of speed 3 came through as `rx fan.speed.3 from the handset` and moved the tile,
    which is the first thing in this app to change a capability without a user asking. The device
    registers an RX

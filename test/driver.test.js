@@ -10,32 +10,50 @@ const { ADDRESS_LENGTH, buildFrame, identifyFrame } = require('../lib/lucci-prot
 // Everything the driver asks of Homey. What this file is for is pairing — which
 // frame an address is taken from, and what happens when the only frame on offer
 // had a symbol reconstructed.
-class FakeDriver {
-    constructor() {
-        this.logs = [];
-        this.payloadHandler = null;
-        this.rxEnabled = 0;
-        this.manifest = { name: { en: 'Ceiling fan' } };
-
-        this.homey = {
-            __: key => key,
-            rf: {
-                getSignal433: () => ({
-                    on: (event, handler) => { if (event === 'payload') this.payloadHandler = handler; },
-                    enableRX: async () => { this.rxEnabled += 1; },
-                    disableRX: async () => { this.rxEnabled -= 1; },
-                }),
+// One Homey, shared by the app and the drivers that run on it — which is the
+// point of this file's harness: the receiver is the app's, and whether two
+// drivers can share it is exactly what went wrong once.
+function homeyStub() {
+    const state = { rxEnabled: 0, payloadHandler: null, signalsMade: 0 };
+    const homey = {
+        __: key => key,
+        rf: {
+            getSignal433: () => {
+                state.signalsMade += 1;
+                return {
+                    on: (event, handler) => { if (event === 'payload') state.payloadHandler = handler; },
+                    enableRX: async () => { state.rxEnabled += 1; },
+                    disableRX: async () => { state.rxEnabled -= 1; },
+                };
             },
-        };
+        },
+    };
+    return { homey, state };
+}
+
+// Both classes need the same two methods, and neither needs more.
+class FakeBase {
+    constructor(homey) {
+        this.homey = homey;
+        this.logs = [];
     }
 
     log(...args) { this.logs.push(args.join(' ')); }
     error(...args) { this.logs.push(`ERROR ${args.join(' ')}`); }
 }
 
+class FakeDriver extends FakeBase {
+    constructor(homey) {
+        super(homey);
+        this.manifest = { name: { en: 'Ceiling fan' } };
+    }
+}
+
+class FakeApp extends FakeBase {}
+
 const STUB = path.join(__dirname, 'homey.driver.stub.js');
 require.cache[STUB] = {
-    id: STUB, filename: STUB, loaded: true, exports: { Driver: FakeDriver },
+    id: STUB, filename: STUB, loaded: true, exports: { Driver: FakeDriver, App: FakeApp },
 };
 const resolveFilename = Module._resolveFilename;
 Module._resolveFilename = function (request, ...rest) {
@@ -43,20 +61,34 @@ Module._resolveFilename = function (request, ...rest) {
 };
 
 const LucciFanDriver = require('../drivers/fan/driver');
+const LucciLightDriver = require('../drivers/light/driver');
+// The real app, because the receiver it owns is what these tests are about.
+const LucciApp = require('../app');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
 // A pairing session, as the learn view drives one.
 const session = () => ({ emitted: [], emit: async function (event, data) { this.emitted.push({ event, data }); } });
 
-async function driver() {
-    const fan = new LucciFanDriver();
-    await fan.onInit();
-    return fan;
+// An app with one driver on it, which is what most of these need.
+async function driver(Kind = LucciFanDriver) {
+    const { homey, state } = homeyStub();
+    const app = new LucciApp(homey);
+    await app.onInit();
+    homey.app = app;
+
+    const instance = new Kind(homey);
+    await instance.onInit();
+    // The driver's own log is what the assertions read, and the app's lines —
+    // RX enabled, unrecognised frames — belong to the same run.
+    instance.logs = app.logs;
+    instance.state = state;
+    instance.app = app;
+    return instance;
 }
 
 // Puts a payload on air, as Homey's signal does.
-const air = (fan, payload, isFirst = true) => fan.payloadHandler(payload, isFirst, 0.01);
+const air = (fan, payload, isFirst = true) => fan.state.payloadHandler(payload, isFirst, 0.01);
 
 // Lets the driver's promise chains run.
 const settle = () => new Promise(resolve => setTimeout(resolve, 5));
@@ -72,7 +104,7 @@ test('pairing takes the address off a full-length frame at once', async () => {
     assert.deepEqual((await learning).address, ADDRESS);
     assert.ok(fan.logs.some(line => line.includes('matched fan.off; address 0101110011110011')),
         fan.logs.join(' | '));
-    assert.equal(fan.rxEnabled, 0, 'RX was left on');
+    assert.equal(fan.state.rxEnabled, 0, 'RX was left on');
 });
 
 test('any button pairs, including one belonging to the light', async () => {
@@ -208,14 +240,14 @@ test('RX is reference counted, so pairing twice does not strand it', async () =>
     await settle();
     air(fan, buildFrame(ADDRESS, 'fan.off', 0));
     await first;
-    assert.equal(fan.rxEnabled, 0);
+    assert.equal(fan.state.rxEnabled, 0);
 
     const second = fan.learnAddress(session());
     await settle();
-    assert.equal(fan.rxEnabled, 1, 'RX did not come back for a second attempt');
+    assert.equal(fan.state.rxEnabled, 1, 'RX did not come back for a second attempt');
     air(fan, buildFrame(ADDRESS, 'fan.speed.0', 0));
     await second;
-    assert.equal(fan.rxEnabled, 0);
+    assert.equal(fan.state.rxEnabled, 0);
 });
 
 test('a device offered for pairing is named and keyed by its address', async () => {
@@ -273,4 +305,76 @@ test('a frame that never carried bit 24 cannot pair either', async () => {
     air(fan, buildFrame(ADDRESS, 'fan.off', 1).slice(0, 24));
 
     await assert.rejects(() => learning, /pair\.timeout_restored/);
+});
+
+test('the two drivers share one receiver, counted once', async () => {
+    // **The bug this file exists to prevent recurring.** enableRX and disableRX
+    // act on the signal, not on the caller, so a count per driver is no count at
+    // all: pairing a light used to finish by calling disableRX and leave the fan
+    // — still registered, its own driver's count untouched — deaf.
+    const { homey, state } = homeyStub();
+    const app = new LucciApp(homey);
+    await app.onInit();
+    homey.app = app;
+
+    const fan = new LucciFanDriver(homey);
+    const light = new LucciLightDriver(homey);
+    await fan.onInit();
+    await light.onInit();
+
+    // One signal and one payload subscription, however many drivers run on it.
+    assert.equal(state.signalsMade, 1, 'each driver took its own signal');
+    assert.equal(state.rxEnabled, 0);
+
+    const onFan = () => {};
+    const onLight = () => {};
+
+    await fan.registerRXListener(onFan);
+    assert.equal(state.rxEnabled, 1);
+
+    // A second listener, through the other driver, must not switch it on twice.
+    await light.registerRXListener(onLight);
+    assert.equal(state.rxEnabled, 1);
+
+    // And the light letting go must not take the fan's receiver with it.
+    await light.unregisterRXListener(onLight);
+    assert.equal(state.rxEnabled, 1, 'the fan went deaf when the light finished');
+
+    await fan.unregisterRXListener(onFan);
+    assert.equal(state.rxEnabled, 0, 'nobody is listening and RX is still on');
+});
+
+test('a frame reaches listeners registered through either driver', async () => {
+    const { homey, state } = homeyStub();
+    const app = new LucciApp(homey);
+    await app.onInit();
+    homey.app = app;
+
+    const fan = new LucciFanDriver(homey);
+    const light = new LucciLightDriver(homey);
+    await fan.onInit();
+    await light.onInit();
+
+    const heard = [];
+    await fan.registerRXListener(frame => heard.push(`fan:${frame.key}`));
+    await light.registerRXListener(frame => heard.push(`light:${frame.key}`));
+
+    state.payloadHandler(buildFrame(ADDRESS, 'light.brighter', 0), true, 0.01);
+
+    // Both, because the app identifies once and hands the frame to everyone —
+    // which is also why the light's codes reach the fan device at all.
+    assert.deepEqual(heard.sort(), ['fan:light.brighter', 'light:light.brighter']);
+});
+
+test('one listener throwing does not stop the others being told', async () => {
+    const fan = await driver();
+    const heard = [];
+
+    await fan.registerRXListener(() => { throw new Error('listener is broken'); });
+    await fan.registerRXListener(frame => heard.push(frame.key));
+
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
+
+    assert.deepEqual(heard, ['fan.off']);
+    assert.ok(fan.logs.some(line => line.includes('RX listener failed')), fan.logs.join(' | '));
 });
