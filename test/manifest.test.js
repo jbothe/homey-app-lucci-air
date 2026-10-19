@@ -86,11 +86,12 @@ test('the enums are pickers, and stay out of Insights', () => {
     }
 });
 
-test('the fan transmits speed and power, and nothing it cannot yet do', () => {
-    // The transmit-only milestone. Direction and the timer have codes and
-    // capabilities, and are deliberately not wired to the driver until the fan
-    // has answered a speed command at all — see the order of work in APP_PLAN.md.
-    assert.deepEqual(driver.capabilities, ['onoff', 'lucci_speed']);
+test('the fan offers every control the protocol can command absolutely', () => {
+    // All four, now that the fan has answered: power and speed are confirmed on
+    // the hardware, direction and the timer are wired but have never been sent.
+    // The light is a separate device and a separate driver — its brightness is
+    // relative, so it cannot be a capability of this shape at all.
+    assert.deepEqual(driver.capabilities, ['onoff', 'lucci_speed', 'lucci_direction', 'lucci_timer']);
     assert.deepEqual(driver.connectivity, ['rf433']);
     assert.equal(driver.class, 'fan');
 

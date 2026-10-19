@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const Module = require('node:module');
 
-const { ADDRESS_LENGTH, identifyFrame } = require('../lib/lucci-protocol');
+const { ADDRESS_LENGTH, identifyFrame, buildFrame } = require('../lib/lucci-protocol');
 
 // Everything the device asks of Homey, and nothing else. What this file is for
 // is which frame goes out for which request, and which capability values are
@@ -15,9 +15,11 @@ class FakeDevice {
         this.storeValues = {};
         this.capabilityValues = {};
         this.multiListener = null;
+        this.listeners = {};
         this.sent = [];
         this.logs = [];
         this.rejectSetOf = null;
+        this.rxListeners = new Set();
 
         this.homey = {
             // Wrapped rather than passed by reference, so a test's mocked timers
@@ -30,6 +32,13 @@ class FakeDevice {
                     tx: async payload => { this.sent.push(payload); },
                 }),
             },
+        };
+
+        // The driver owns RX, reference counted, because Homey's enableRX is
+        // per-signal rather than per-listener.
+        this.driver = {
+            registerRXListener: async listener => { this.rxListeners.add(listener); },
+            unregisterRXListener: async listener => { this.rxListeners.delete(listener); },
         };
     }
 
@@ -46,6 +55,8 @@ class FakeDevice {
     registerMultipleCapabilityListener(ids, listener, timeout) {
         this.multiListener = { ids, listener, timeout };
     }
+
+    registerCapabilityListener(id, listener) { this.listeners[id] = listener; }
 
     async setUnavailable(reason) { this.unavailable = reason; }
     log(...args) { this.logs.push(args.join(' ')); }
@@ -85,6 +96,20 @@ async function request(fan, values) {
     for (const [capability, value] of Object.entries(values)) {
         fan.capabilityValues[capability] = value;
     }
+    await new Promise(resolve => setTimeout(resolve, 1));
+}
+
+// A request for one capability, the way Homey makes it: the listener runs, then
+// Homey writes the value that was asked for.
+async function setOne(fan, capability, value) {
+    await fan.listeners[capability](value, {});
+    fan.capabilityValues[capability] = value;
+    await new Promise(resolve => setTimeout(resolve, 1));
+}
+
+// A frame arriving off the air, as the driver hands it to every device.
+async function receive(fan, payload, isFirst = true) {
+    for (const listener of fan.rxListeners) listener(identifyFrame(payload), isFirst);
     await new Promise(resolve => setTimeout(resolve, 1));
 }
 
@@ -223,4 +248,147 @@ test('every frame carries this fan\'s address', async () => {
     for (const payload of fan.sent) {
         assert.deepEqual(identifyFrame(payload).address, ADDRESS);
     }
+});
+
+// --- direction and the timer -------------------------------------------------
+
+test('direction and the timer get a listener each, not the coupled one', async () => {
+    const fan = await device({ speed: '2' });
+
+    // Absolute like the speed, but nothing else's business: one capability, one
+    // code, and no second capability whose value has to be decided at the same
+    // moment.
+    assert.deepEqual(Object.keys(fan.listeners).sort(), ['lucci_direction', 'lucci_timer']);
+    assert.deepEqual(fan.multiListener.ids, ['onoff', 'lucci_speed']);
+});
+
+test('direction sends its code and implies nothing', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+    await setOne(fan, 'lucci_direction', 'reverse');
+
+    assert.deepEqual(keysSent(fan), ['fan.direction.reverse']);
+    // A speed code starts the fan, confirmed on the hardware. Whether a
+    // direction code does is not known, and guessing would put the tile ahead of
+    // the fan in the one direction a user cannot correct by looking.
+    assert.equal(fan.capabilityValues.onoff, false);
+});
+
+test('the timer sends its code and implies nothing', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+    await setOne(fan, 'lucci_timer', '8h');
+
+    assert.deepEqual(keysSent(fan), ['fan.timer.8h']);
+    assert.equal(fan.capabilityValues.onoff, false);
+});
+
+test('every direction and timer value has a code that builds', async () => {
+    const fan = await device({ speed: '2' });
+    for (const value of ['forward', 'reverse']) await setOne(fan, 'lucci_direction', value);
+    for (const value of ['off', '2h', '4h', '8h']) await setOne(fan, 'lucci_timer', value);
+
+    assert.deepEqual(keysSent(fan), [
+        'fan.direction.forward', 'fan.direction.reverse',
+        'fan.timer.off', 'fan.timer.2h', 'fan.timer.4h', 'fan.timer.8h',
+    ]);
+});
+
+// --- following the handset ---------------------------------------------------
+
+const heard = (fan, key) => receive(fan, buildFrame(ADDRESS, key));
+
+test('the device listens for the handset, and stops when it uninits', async () => {
+    const fan = await device({ speed: '2' });
+    assert.equal(fan.rxListeners.size, 1);
+
+    await fan.onUninit();
+    assert.equal(fan.rxListeners.size, 0);
+});
+
+test('a received speed sets the step and turns the fan on', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+    await heard(fan, 'fan.speed.4');
+
+    assert.equal(fan.capabilityValues.lucci_speed, '4');
+    assert.equal(fan.capabilityValues.onoff, true, 'a speed code starts the fan');
+});
+
+test('a received off turns the fan off', async () => {
+    const fan = await device({ speed: '3', onoff: true });
+    await heard(fan, 'fan.off');
+
+    assert.equal(fan.capabilityValues.onoff, false);
+    assert.equal(fan.capabilityValues.lucci_speed, '3', 'the step is still remembered');
+});
+
+test('a received direction and timer are exact, not a hint', async () => {
+    // The whole reason following the handset is worth the effort: these are
+    // absolute, so the handset tells us the state it moved to rather than that
+    // something changed.
+    const fan = await device({ speed: '2' });
+
+    await heard(fan, 'fan.direction.reverse');
+    assert.equal(fan.capabilityValues.lucci_direction, 'reverse');
+
+    await heard(fan, 'fan.timer.4h');
+    assert.equal(fan.capabilityValues.lucci_timer, '4h');
+});
+
+test('following the handset never transmits', async () => {
+    // The one mistake in this path that would be unrecoverable: echoing a frame
+    // back would have Homey and the handset talking over each other, and on a
+    // relative command would double the step.
+    const fan = await device({ speed: '2', onoff: false });
+
+    for (const key of ['fan.speed.5', 'fan.off', 'fan.direction.forward', 'fan.timer.2h']) {
+        await heard(fan, key);
+    }
+    assert.deepEqual(fan.sent, [], 'mirroring put a frame on air');
+});
+
+test('another handset is ignored', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+    const elsewhere = ADDRESS.map((bit, i) => (i === 0 ? bit ^ 1 : bit));
+
+    await receive(fan, buildFrame(elsewhere, 'fan.speed.5'));
+
+    assert.equal(fan.capabilityValues.lucci_speed, '2', 'one household drove another\'s fan');
+    assert.equal(fan.capabilityValues.onoff, false);
+});
+
+test('repeats of one press are collapsed, a later press is not', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+    const lines = () => fan.logs.filter(line => line === 'rx fan.speed.5 from the handset').length;
+
+    // One press can reach us as two or three receptions: isFirst only groups the
+    // frames Homey heard as a single burst.
+    await heard(fan, 'fan.speed.5');
+    await heard(fan, 'fan.speed.5');
+    assert.equal(lines(), 1, 'the same press was acted on twice');
+
+    // Long enough later, it is a new press.
+    fan.lastRxAt = 0;
+    await heard(fan, 'fan.speed.5');
+    assert.equal(lines(), 2);
+});
+
+test('a frame Homey marks as a repeat is ignored outright', async () => {
+    const fan = await device({ speed: '2', onoff: false });
+    await receive(fan, buildFrame(ADDRESS, 'fan.speed.5'), false);
+
+    assert.equal(fan.capabilityValues.lucci_speed, '2');
+});
+
+test('the light is heard, said once, and otherwise left alone', async () => {
+    // Its codes carry the same address, so this device hears them whether it
+    // wants to or not. A held dimmer button is 56 frames, which is not worth a
+    // line each — but that the light is audible at all is step 6's premise.
+    const fan = await device({ speed: '2', onoff: true });
+
+    await heard(fan, 'light.onoff');
+    await heard(fan, 'light.dimmer');
+    await heard(fan, 'light.dimmer');
+
+    assert.equal(fan.logs.filter(line => line.includes('the light is a separate device')).length, 1);
+    assert.equal(fan.capabilityValues.onoff, true, 'a light command moved the fan');
+    assert.deepEqual(fan.sent, []);
 });

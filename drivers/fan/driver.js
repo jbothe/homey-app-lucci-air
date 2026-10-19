@@ -6,6 +6,24 @@ const { SIGNAL_ID, identifyFrame, describeFrame } = require('../../lib/lucci-pro
 // How long to listen for a button press before giving up, in milliseconds.
 const LEARN_TIMEOUT = 30000;
 
+// How long to hold a reconstructed frame while hoping for a full-length one,
+// in milliseconds.
+//
+// Pairing is the one caller that cannot check an address after the fact: every
+// other path compares a received frame against the address it already has, and
+// pairing is what establishes that address. A reconstructed 24-symbol frame has
+// one inferred symbol — and under the leading-bit reading that symbol *is*
+// address bit 0 (see completeFrame) — so pairing on one risks an address off by
+// a bit, which gives a device that is added, looks fine and never works.
+//
+// It is a preference rather than a requirement, because a receiver that only
+// ever delivers 24 symbols would otherwise be impossible to pair, which is the
+// failure the 24-symbol allowance exists to avoid. On the observed hardware the
+// full frame followed the short one by 38ms within a single press, so this costs
+// nothing in practice: 750ms covers a whole 423ms press and then some, and is
+// imperceptible inside a 30-second window.
+const FULL_FRAME_GRACE = 750;
+
 // Ambient 433 MHz traffic occasionally fits our timings. The unrecognised-frame
 // log exists to diagnose a silent receiver, not to narrate the airwaves, so it
 // is throttled to one line per minute with a count of what it skipped.
@@ -143,32 +161,69 @@ class LucciFanDriver extends Homey.Driver {
         try {
             return await new Promise((resolve, reject) => {
                 let timer = null;
+                let grace = null;
+                // A reconstructed frame's address, held in case a full-length
+                // one follows. Resolved with if none does.
+                let fallback = null;
 
                 const settle = (fn, arg) => {
-                    if (timer !== null) {
-                        clearTimeout(timer);
-                        timer = null;
+                    for (const pending of [timer, grace]) {
+                        if (pending !== null) clearTimeout(pending);
                     }
+                    timer = null;
+                    grace = null;
                     stop().then(() => fn(arg));
                 };
 
                 listener = (frame, isFirst) => {
-                    // Each press is transmitted nine times; only count it once.
-                    if (isFirst === false) return;
+                    // Each press is transmitted nine times; count it once, so
+                    // the number on screen means presses. Every frame is still
+                    // considered below, because the full-length one can arrive
+                    // as a later frame of the same burst — which on the observed
+                    // hardware is exactly what it does.
+                    if (isFirst !== false) {
+                        heard += 1;
+                        log(`heard #${heard}: ${frame.key}`);
 
-                    heard += 1;
-                    log(`heard #${heard}: ${frame.key}`);
-                    session.emit('rx', { heard, command: frame.key }).catch(() => {});
+                        // The progress counter is the view's, and the view may
+                        // have navigated away. Guarded rather than awaited,
+                        // because a failure to update a number on screen must
+                        // not cost the user the press it was counting —
+                        // onPayload catches what a listener throws and logs it,
+                        // so the frame would be dropped and pairing would look
+                        // as though nothing had been heard.
+                        try {
+                            session.emit('rx', { heard, command: frame.key })?.catch?.(() => {});
+                        } catch (err) {
+                            log('could not update the view:', err.message);
+                        }
+                    }
 
                     // Any button will do. identifyFrame has already held the
                     // frame to the layout — 24 or 25 bits, a selector of 10 or
-                    // 01, one of the sixteen known command tails, and parity —
-                    // and that structural check is what stops pairing latching
-                    // onto an unrelated 433 MHz device in range. A light button
-                    // carries the same address as a fan button, so pressing one
-                    // is no less valid.
-                    log(`matched ${frame.key}; address:`, frame.address.join(''));
-                    settle(resolve, frame.address);
+                    // 01, one of the sixteen known command tails — and that
+                    // structural check is what stops pairing latching onto an
+                    // unrelated 433 MHz device in range. A light button carries
+                    // the same address as a fan button, so pressing one is no
+                    // less valid.
+                    if (!frame.restored) {
+                        log(`matched ${frame.key} on a full frame; address:`, frame.address.join(''));
+                        settle(resolve, frame.address);
+                        return;
+                    }
+
+                    // One symbol of this frame was inferred rather than heard,
+                    // and in the leading-bit case that symbol is part of the
+                    // address. Worth waiting a moment for a frame that needed no
+                    // inferring; see FULL_FRAME_GRACE.
+                    if (fallback !== null) return;
+                    fallback = frame.address;
+                    log(`matched ${frame.key} on a restored frame; holding ${FULL_FRAME_GRACE}ms for a full one`);
+
+                    grace = setTimeout(() => {
+                        log('no full frame arrived; pairing on the restored one:', fallback.join(''));
+                        settle(resolve, fallback);
+                    }, FULL_FRAME_GRACE);
                 };
 
                 timer = setTimeout(() => {

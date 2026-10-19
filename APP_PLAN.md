@@ -192,8 +192,25 @@ against itself.
    was the design's one real bet. Receiving also works, which was not being tested: a frame arrived
    and decoded on the first run, and it is what found the leading-bit truncation now handled in
    `completeFrame`.
-4. **Direction and timer** on the fan.
-5. **Receiving**, and state mirroring from the handset.
+4. **Direction and timer** on the fan. **Written, and never transmitted.** Each gets a listener of
+   its own rather than joining the coupled pair: both are absolute, but neither shares a frame with
+   another capability, so there is nothing to pool. Neither implies `onoff`, because whether these
+   codes start a stopped fan is not known and a speed code's doing so is no evidence about them.
+5. **Receiving**, and state mirroring from the handset. **Written.** The device registers an RX
+   listener and mirrors through `set`, not `reflect` — nothing is deferred because no capability
+   listener is running on that path — and never through `triggerCapabilityListener`, which would
+   transmit a received press back at the fan. Repeats of one press are collapsed over 2 seconds,
+   which is safe here only because every fan command is absolute or idempotent; **the light's
+   relative brighter and dimmer must not reuse that window.** Light frames reach this device because
+   they carry the same address: they are ignored, and said once, since the light being audible is
+   step 6's premise.
+
+   Pairing now **prefers a full-length frame** over a reconstructed one, holding a 24-symbol
+   candidate 750ms for a 25-symbol frame before settling for it. Pairing is the one caller that
+   cannot check an address after the fact — it is what establishes the address — and under the
+   leading-bit reading the reconstructed symbol *is* address bit 0. A preference and not a
+   requirement, because a receiver that only ever delivered 24 symbols would otherwise be
+   impossible to pair.
 6. **Light driver**: `onoff` and the two brightness buttons first — they need no state and no
    timings. Then the `dim` slider: saturating holds for 0% and 100%, discrete presses in between,
    and a calibrate action.

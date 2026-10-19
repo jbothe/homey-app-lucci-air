@@ -295,9 +295,14 @@ preamble mismatches confined to the first four positions — that is, to the art
 - **The fan's power and speed codes have been sent; nothing else has.** Confirmed on the hardware:
   pairing, the off code, and speed steps 0, 1, 2, 3 and 5 — each setting the fan to the step asked
   for, from standing and while already running. Step 4 is the only speed not yet sent, and it sits
-  between two that were. The two direction codes, the four timer codes and all three light codes are
-  still only observed: they are built the same way from the same tables, which is good reason to
-  expect them to work and not evidence that they do.
+  between two that were. The two direction codes and the four timer codes are now **wired to
+  capabilities but have never been transmitted**, and the three light codes are not wired at all.
+  All nine are built the same way from the same tables, which is good reason to expect them to work
+  and not evidence that they do.
+- **Whether a direction or timer code starts a stopped fan is unknown.** A speed code does, which is
+  confirmed. The app therefore implies nothing from the other two: it would be putting the tile
+  ahead of the fan in the one direction a user cannot correct by looking at it. The first hardware
+  test of those codes should press them with the fan stopped and say what happens.
 - **A speed code starts the fan from off**, which the handset's behaviour implied and the radio now
   confirms. It is what makes Homey's asymmetric `onoff` honest: there is no "fan on" code, and
   sending a speed is how the fan is started.

@@ -22,10 +22,18 @@
   },
   "capabilities": [
     "onoff",
-    "lucci_speed"
+    "lucci_speed",
+    "lucci_direction",
+    "lucci_timer"
   ],
   "capabilitiesOptions": {
     "lucci_speed": {
+      "preventInsights": true
+    },
+    "lucci_direction": {
+      "preventInsights": true
+    },
+    "lucci_timer": {
       "preventInsights": true
     }
   },

@@ -1,7 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
-const { SIGNAL_ID, ADDRESS_LENGTH, FAN_SPEEDS, buildFrame } = require('../../lib/lucci-protocol');
+const {
+    SIGNAL_ID, ADDRESS_LENGTH, FAN_SPEEDS, buildFrame, sameAddress,
+} = require('../../lib/lucci-protocol');
 
 // The speed a fan starts on when it has never been given one.
 //
@@ -18,6 +20,20 @@ const DEFAULT_SPEED = '2';
 // How long Homey pools changes to the two capabilities before calling the
 // listener once, in milliseconds. Homey's own default for a coupled listener.
 const DEBOUNCE = 250;
+
+// How long the same received command is treated as one press, in milliseconds.
+//
+// One press can reach us as two or three separate receptions: `isFirst` only
+// groups the frames Homey heard as a single burst, and reception dropping
+// briefly mid-transmission starts a new one. Nine frames occupy ~423ms, so a
+// window several times that collapses a press however it was split.
+//
+// **Collapsing is only safe because every fan command is absolute or
+// idempotent** — "set speed 3", "reverse", "8 hours", "off" — so a suppressed
+// duplicate can never lose information. The light's brighter and dimmer are
+// relative, one press one step, and collapsing those would silently drop steps:
+// the light driver must not reuse this.
+const RX_REPEAT_WINDOW = 2000;
 
 class LucciFanDevice extends Homey.Device {
     async onInit() {
@@ -68,6 +84,41 @@ class LucciFanDevice extends Homey.Device {
         this.registerMultipleCapabilityListener(
             ['onoff', 'lucci_speed'], this.onCapabilities.bind(this), DEBOUNCE,
         );
+
+        // Direction and the timer get a listener each, and deliberately not the
+        // coupled one. They are absolute like the speed, but unlike it they are
+        // nothing else's business: one capability, one code, and no second
+        // capability whose value has to be decided at the same moment. Pooling
+        // them with `onoff` would only invite the question of what a request for
+        // "off and reverse" means, which the protocol does not answer — the
+        // handset has no such combination.
+        //
+        // Neither implies `onoff`. A speed code starts the fan, confirmed on the
+        // hardware; whether a direction or timer code does is not known, and
+        // guessing would put the tile ahead of the fan in the one direction a
+        // user cannot correct by looking. The hardware test should settle it.
+        this.registerCapabilityListener('lucci_direction', async value => {
+            await this.send(`fan.direction.${value}`, 'lucci_direction');
+        });
+        this.registerCapabilityListener('lucci_timer', async value => {
+            await this.send(`fan.timer.${value}`, 'lucci_timer');
+        });
+
+        // Follow the handset, so Homey does not show stale state. Because speed,
+        // direction and the timer are absolute, a received frame gives the exact
+        // state rather than a hint — which is the whole reason this is worth the
+        // effort. Failing here must not stop the device from transmitting.
+        this.onRX = this.onRX.bind(this);
+        try {
+            await this.driver.registerRXListener(this.onRX);
+        } catch (err) {
+            this.error('could not listen for the handset; state may go stale:', err.message);
+        }
+    }
+
+    async onUninit() {
+        await this.driver.unregisterRXListener(this.onRX)
+            .catch(err => this.error('could not stop listening:', err.message));
     }
 
     // setCapabilityValue with the failure actually reported.
@@ -172,6 +223,75 @@ class LucciFanDevice extends Homey.Device {
                 else this.error(`${capability} would not hold ${JSON.stringify(value)}; reads ${JSON.stringify(now)}`);
             }
         }, 0);
+    }
+
+    // Every Lucci frame Homey receives, from any handset in range.
+    onRX(frame, isFirst) {
+        // Each press is transmitted nine times; only act on it once.
+        if (isFirst === false) return;
+
+        // Another household's handset, or another fan in this one.
+        if (!sameAddress(frame.address, this.address)) return;
+
+        if (frame.domain !== 'fan') {
+            // The light's codes carry the same address, so this device hears
+            // them whether it wants to or not. Said once, because it is worth
+            // knowing the light is audible — that is step 6's whole premise —
+            // and a held dimmer button is 56 frames, which is not worth a line
+            // each.
+            if (this.heardLight !== true) {
+                this.heardLight = true;
+                this.log(`heard ${frame.key} from the handset; the light is a separate device, still to come`);
+            }
+            return;
+        }
+
+        const now = Date.now();
+        if (frame.key === this.lastRxKey && now - this.lastRxAt < RX_REPEAT_WINDOW) return;
+        this.lastRxKey = frame.key;
+        this.lastRxAt = now;
+
+        this.mirror(frame).catch(err => this.error(`mirroring ${frame.key} failed:`, err.message));
+    }
+
+    // Brings the capabilities into line with a press that already happened.
+    //
+    // Through `set` rather than `reflect`: nothing is deferred here because no
+    // capability listener is running — this comes from a radio event, not from a
+    // request Homey is waiting on, so there is no post-listener write to lose a
+    // race with. (A press landing in the same instant as a user's own change
+    // could still lose one, and the next press puts it right, every fan command
+    // being absolute.)
+    //
+    // `set`, never `triggerCapabilityListener`: this reflects a change the fan
+    // has already made, and must not transmit it back to the fan.
+    async mirror(frame) {
+        switch (frame.command) {
+            case 'off':
+                await this.set('onoff', false);
+                break;
+            case 'speed':
+                // A speed code starts the fan, so hearing one means both.
+                await this.set('lucci_speed', frame.value);
+                await this.set('onoff', true);
+                break;
+            case 'direction':
+                await this.set('lucci_direction', frame.value);
+                break;
+            case 'timer':
+                // What was commanded, not time remaining: the fan reports
+                // nothing, so Homey cannot know when this expires.
+                await this.set('lucci_timer', frame.value);
+                break;
+            default:
+                // A fan command with no capability behind it yet. Logged rather
+                // than ignored, because this is how a seventeenth button would
+                // first announce itself.
+                this.log(`heard ${frame.key}, which no capability tracks`);
+                return;
+        }
+
+        this.log(`rx ${frame.key} from the handset`);
     }
 }
 

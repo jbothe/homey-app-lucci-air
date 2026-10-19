@@ -81,13 +81,13 @@ test('identifyFrame names the field as well as the command', () => {
     const light = identifyFrame(buildFrame(HANDSET, 'light.dimmer'));
     assert.deepEqual(light, {
         address: HANDSET, domain: 'light', command: 'dimmer', value: null, key: 'light.dimmer',
-        parityOk: true,
+        parityOk: true, restored: false,
     });
 
     const speed = identifyFrame(buildFrame(HANDSET, 'fan.speed.4'));
     assert.deepEqual(speed, {
         address: HANDSET, domain: 'fan', command: 'speed', value: '4', key: 'fan.speed.4',
-        parityOk: true,
+        parityOk: true, restored: false,
     });
 });
 
@@ -116,6 +116,11 @@ test('the frame the radio actually delivered reads as the button that was presse
     // bit was recovered correctly rather than merely plausibly.
     assert.deepEqual(completeFrame(FROM_THE_RADIO), buildFrame(HANDSET, 'fan.off'));
     assert.match(describeFrame(FROM_THE_RADIO), /^fan\.off \(24 symbols, one restored\)/);
+
+    // Pairing is the one caller that has to know, having no stored address to
+    // check the result against.
+    assert.equal(found.restored, true);
+    assert.equal(identifyFrame(buildFrame(HANDSET, 'fan.off')).restored, false);
 });
 
 test('a leading bit lost off any command is recovered from parity', () => {
