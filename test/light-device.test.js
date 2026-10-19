@@ -68,12 +68,16 @@ const LucciLightDevice = require('../drivers/light/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
-async function light({ on = true, at, bit24 = 0 } = {}) {
+// `on: null` leaves the capability unset, which is what a brand-new device
+// looks like — the case the pair-time question exists for. `told` is the answer
+// that question stored.
+async function light({ on = true, at, bit24 = 0, told } = {}) {
     const device = new LucciLightDevice();
     device.storeValues.address = ADDRESS;
     if (bit24 !== null) device.storeValues.bit24 = bit24;
     if (at !== undefined) device.storeValues.position = at;
-    device.capabilityValues.onoff = on;
+    if (told !== undefined) device.storeValues.lit = told;
+    if (on !== null) device.capabilityValues.onoff = on;
     await device.onInit();
     return device;
 }
@@ -526,4 +530,81 @@ test('every press of a move is spaced, so none lands on the one before', async (
         // The harness clock runs at 1/100, so the real 573ms shows up as ~6ms.
         assert.ok(at[i] - at[i - 1] >= 4, `press ${i} came ${at[i] - at[i - 1]}ms after ${i - 1}`);
     }
+});
+
+// --- where the first belief comes from --------------------------------------
+
+test('a brand-new light believes what it was told at pair time', async () => {
+    // The one fact about this device that cannot be worked out and cannot be
+    // measured. Before it was asked, the belief started as a guess and every
+    // toggle after it preserved that guess faithfully.
+    for (const told of [true, false]) {
+        const device = await light({ on: null, at: 10, told });
+
+        assert.equal(device.lit, told, `told ${told}`);
+        assert.equal(device.capabilityValues.onoff, told, 'the tile did not show it');
+        assert.ok(device.logs.some(line => line.includes('first run')), device.logs.join(' | '));
+    }
+});
+
+test('a light paired before the question was asked assumes off', async () => {
+    // Nothing stored and nothing on the capability: there is no answer to use,
+    // and off is the assumption that cannot turn the light off by surprise.
+    const device = await light({ on: null, at: 10 });
+
+    assert.equal(device.lit, false);
+    assert.equal(device.capabilityValues.onoff, false);
+});
+
+test('after a restart the capability wins, not the pair-time answer', async () => {
+    // It holds everything that has happened since pairing, which is strictly
+    // better than what was true once.
+    const device = await light({ on: true, at: 10, told: false });
+
+    assert.equal(device.lit, true);
+    assert.ok(device.logs.some(line => line.includes('carried over')), device.logs.join(' | '));
+});
+
+// --- a brightness press is evidence -----------------------------------------
+
+test('a received brightness press means the light is on', async () => {
+    // The codes do nothing while it is off, so nobody presses dimmer at a dark
+    // light — they reach for the toggle. The only self-correction available for
+    // a belief with no feedback behind it.
+    for (const key of ['light.brighter', 'light.dimmer']) {
+        const device = await light({ on: false, at: 10 });
+        await receive(device, key);
+
+        assert.equal(device.lit, true, key);
+        assert.equal(device.capabilityValues.onoff, true, key);
+        assert.ok(device.logs.some(line => line.includes('believed off — so it is on')),
+            device.logs.join(' | '));
+    }
+});
+
+test('the inference does not transmit, and still moves the estimate', async () => {
+    const device = await light({ on: false, at: 10 });
+    await receive(device, 'light.brighter');
+
+    assert.deepEqual(device.sent, [], 'put a frame on air for something it overheard');
+    assert.equal(device.position, 11, 'the step was not counted');
+});
+
+test('a brightness press at a light already believed on says nothing new', async () => {
+    const device = await light({ on: true, at: 10 });
+    await receive(device, 'light.dimmer');
+
+    assert.equal(device.lit, true);
+    assert.equal(device.logs.filter(line => line.includes('so it is on')).length, 0);
+});
+
+test('Homey\'s own brightness presses are still refused while it is off', async () => {
+    // The inference is about what the handset did, not about what Homey may do.
+    // Sending a brightness code at a light believed off would be transmitting
+    // into the void, and would not make it true.
+    const device = await light({ on: false, at: 10 });
+    await request(device, 'lucci_brighter', true);
+
+    assert.deepEqual(device.sent, []);
+    assert.equal(device.lit, false);
 });

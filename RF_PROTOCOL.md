@@ -450,7 +450,16 @@ Three things follow, and the app does all three:
    however the light got to where it is. It is the way out when the belief has drifted: press until
    the light does what you want, and Homey follows along.
 3. **What the handset does is overheard and believed**, because a received frame is evidence and a
-   stored belief is not.
+   stored belief is not. **A received brightness press is taken to mean the light is on**, since
+   those codes do nothing while it is off — nobody presses dimmer at a dark light, they reach for
+   the toggle. It is an inference rather than a reading, and it is the only self-correction
+   available for a belief with no feedback behind it: ordinary use of the handset quietly puts Homey
+   back in step.
+4. **The first belief is asked for, not guessed.** Pairing ends with one question — is the light on
+   right now — because that is the only moment someone is standing in front of the light on purpose,
+   and because it is the one fact about this device that cannot be measured. Without it the belief
+   began as a coin toss and every toggle afterwards preserved it faithfully. After a restart the
+   capability wins instead, holding everything that has happened since.
 
 ## Adding a command
 

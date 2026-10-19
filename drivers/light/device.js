@@ -40,7 +40,22 @@ class LucciLightDevice extends Homey.Device {
         // nothing — one toggle for two presses, and Homey left believing the
         // opposite of what the light was doing. The capability is this field's
         // display; this field is what the code decides on.
-        this.lit = this.getCapabilityValue('onoff') === true;
+        //
+        // Where the first value comes from matters. After a restart the
+        // capability holds everything that has happened since pairing, which is
+        // the best available. On the very first init there is nothing there, and
+        // the fallback is what the user was asked at pair time — the one fact
+        // about this device that cannot be measured. Without it the belief
+        // started as a guess and every toggle after it preserved that guess
+        // faithfully.
+        const known = this.getCapabilityValue('onoff');
+        const told = this.getStoreValue('lit');
+        this.lit = known === null ? told === true : known === true;
+        this.log(`light is believed ${this.lit ? 'on' : 'off'}`
+            + (known === null
+                ? ` (first run; you said it was ${told === true ? 'on' : 'off'} when pairing)`
+                : ' (carried over from before the restart)'));
+        if (known === null) await this.set('onoff', this.lit);
 
         // Where the light is believed to be, as a step, or null for "no idea".
         //
@@ -407,6 +422,18 @@ class LucciLightDevice extends Homey.Device {
         }
 
         if (frame.command !== 'brighter' && frame.command !== 'dimmer') return;
+
+        // **A brightness press means the light is on.** The codes do nothing
+        // while it is off, confirmed on the hardware, so nobody presses dimmer
+        // at a dark light — they reach for the toggle instead. It is an
+        // inference rather than a reading, and it is the only self-correction
+        // available for a belief that has no feedback behind it: ordinary use of
+        // the handset quietly puts Homey back in step.
+        if (!this.lit) {
+            this.lit = true;
+            await this.set('onoff', true);
+            this.log(`rx ${frame.key} at a light believed off — so it is on`);
+        }
 
         // A press at the handset while Homey is mid-move makes the estimate
         // wrong in a way neither side can reconcile: both are stepping the same

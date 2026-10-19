@@ -15,7 +15,7 @@
     "retry": "Réessayer",
     "found_hint": "Ajoutez maintenant votre ventilateur. Homey peut lui envoyer les mêmes codes que la télécommande — mais le ventilateur ne renvoie rien, donc Homey affiche ce qu'il a commandé ou entendu en dernier.",
     "not_learned": "Homey n'a pas encore appris votre télécommande. Revenez en arrière et appuyez sur une touche.",
-    "found_hint_light": "Ajoutez maintenant votre lampe. Homey peut lui envoyer les mêmes codes que la télécommande — mais la lampe ne renvoie rien, donc la luminosité est suivie et non mesurée. Vous pouvez calibrer à tout moment via Réglages → Maintenance → Essayer de réparer.",
+    "found_hint_light": "Ensuite, Homey a besoin d'une chose qu'il ne peut pas déduire : si la lampe est allumée en ce moment.",
     "timeout_restored": "Homey a entendu une télécommande Lucci mais jamais un signal complet, donc l'adresse n'était pas sûre. Rapprochez la télécommande de Homey et réessayez."
   },
   "calibrate": {
@@ -30,5 +30,13 @@
     "started_hint": "Cela prend environ {{seconds}} secondes. Vous pouvez fermer ; Homey continue et saura où la lampe arrive.",
     "finish": "Terminé",
     "failed": "Impossible de démarrer"
+  },
+  "state": {
+    "title": "État de la lampe",
+    "question": "La lampe est-elle allumée en ce moment ?",
+    "hint": "La lampe ne renvoie jamais rien : c'est la seule occasion de dire la vérité à Homey au lieu de deviner. Tout ce qui suit découle de votre réponse : regardez la lampe, pas l'interrupteur.",
+    "on": "Elle est allumée",
+    "off": "Elle est éteinte",
+    "failed": "Impossible d'enregistrer"
   }
 }

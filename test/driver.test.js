@@ -378,3 +378,58 @@ test('one listener throwing does not stop the others being told', async () => {
     assert.deepEqual(heard, ['fan.off']);
     assert.ok(fan.logs.some(line => line.includes('RX listener failed')), fan.logs.join(' | '));
 });
+
+test('the light driver asks whether the light is on, and stores the answer', async () => {
+    // The question exists because the answer cannot be measured. It is asked
+    // during pairing because that is the only moment someone is standing in
+    // front of the light on purpose.
+    for (const lit of [true, false]) {
+        const light = await driver(LucciLightDriver);
+        const handlers = {};
+        const view = session();
+        view.setHandler = (event, handler) => { handlers[event] = handler; };
+        await light.onPair(view);
+
+        const learning = handlers.learn();
+        await settle();
+        air(light, buildFrame(ADDRESS, 'light.onoff', 0));
+        await learning;
+
+        await handlers.state({ lit });
+
+        const [device] = await handlers.list_devices();
+        assert.equal(device.store.lit, lit, `answered ${lit}`);
+        assert.equal(device.data.id, `lucci-light-${ADDRESS.join('')}`);
+        assert.deepEqual(device.store.address, ADDRESS);
+    }
+});
+
+test('a light paired without answering stores no answer rather than a guess', async () => {
+    // The view offers no way past the question, so this should not happen — and
+    // if it does, the device assumes off rather than inheriting a stale answer.
+    const light = await driver(LucciLightDriver);
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await light.onPair(view);
+
+    const learning = handlers.learn();
+    await settle();
+    air(light, buildFrame(ADDRESS, 'light.onoff', 0));
+    await learning;
+
+    const [device] = await handlers.list_devices();
+    assert.equal(device.store.lit, null);
+});
+
+test('the fan is not asked, because nothing about it needs telling', async () => {
+    // Its speed, direction and timer are absolute: a handset press says exactly
+    // what state the fan moved to, so there is nothing a person could add.
+    const fan = await driver();
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await fan.onPair(view);
+
+    assert.deepEqual(Object.keys(handlers).sort(), ['learn', 'list_devices']);
+});

@@ -15,7 +15,7 @@
     "retry": "Erneut versuchen",
     "found_hint": "Füge nun deinen Ventilator hinzu. Homey kann ihm dieselben Codes senden wie der Handsender — der Ventilator meldet aber nichts zurück, daher zeigt Homey, was zuletzt gesendet oder mitgehört wurde.",
     "not_learned": "Homey hat deinen Handsender noch nicht gelernt. Gehe zurück und drücke eine Taste.",
-    "found_hint_light": "Füge nun deine Lampe hinzu. Homey kann ihr dieselben Codes senden wie der Handsender — die Lampe meldet aber nichts zurück, daher wird die Helligkeit mitgezählt und nicht gemessen. Kalibrieren geht jederzeit über Einstellungen → Wartung → Reparatur versuchen.",
+    "found_hint_light": "Als Nächstes braucht Homey eine Angabe, die es selbst nicht ermitteln kann: ob das Licht gerade an ist.",
     "timeout_restored": "Homey hat einen Lucci-Handsender gehört, aber nie ein vollständiges Signal, daher war die Adresse nicht sicher. Bringe den Handsender näher an Homey und versuche es erneut."
   },
   "calibrate": {
@@ -30,5 +30,13 @@
     "started_hint": "Das dauert etwa {{seconds}} Sekunden. Du kannst das schließen; Homey macht weiter und weiß, wo die Lampe endet.",
     "finish": "Fertig",
     "failed": "Konnte nicht starten"
+  },
+  "state": {
+    "title": "Lichtstatus",
+    "question": "Ist das Licht gerade an?",
+    "hint": "Die Lampe meldet nie etwas zurück, das hier ist also die einzige Gelegenheit, Homey die Wahrheit zu sagen statt zu raten. Alles Weitere folgt aus deiner Antwort: schau auf die Lampe, nicht auf den Schalter.",
+    "on": "Sie ist an",
+    "off": "Sie ist aus",
+    "failed": "Konnte das nicht speichern"
   }
 }

@@ -172,8 +172,11 @@
         {
           "id": "learn",
           "navigation": {
-            "next": "list_devices"
+            "next": "state"
           }
+        },
+        {
+          "id": "state"
         },
         {
           "id": "list_devices",

@@ -57,6 +57,22 @@ the capabilities a request carried when the listener resolves, so the implied on
 then reads itself back, which is what makes a log able to settle this rather than a user noticing it
 again.
 
+## The light's first belief is asked for
+
+`onoff` for the light is a belief with nothing behind it, so where the *first* value comes from
+decides how wrong it can be. Before this it came from nowhere — Homey's default — and every toggle
+after it preserved that guess faithfully, which made the drift look continuous when it was really
+one bad initial condition plus faithful bookkeeping.
+
+So pairing ends with a question: **is the light on right now?** It is asked there because that is the
+only moment someone is deliberately standing in front of the light, and the step offers no way past
+it — the two answers are the only navigation — so it cannot be skipped and left to a default. The
+answer goes in the device store and is used on the very first init only; after a restart the
+capability wins, holding everything that has happened since.
+
+The fan is not asked, and should not be: its speed, direction and timer are absolute, so a handset
+press says exactly what state it moved to and there is nothing a person could add.
+
 ## Light capabilities
 
 | Capability | Type | Why |

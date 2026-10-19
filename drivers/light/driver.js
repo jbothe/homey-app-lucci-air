@@ -14,6 +14,36 @@ const LucciDriver = require('../../lib/lucci-driver');
 class LucciLightDriver extends LucciDriver {
     get deviceIdPrefix() { return 'lucci-light'; }
 
+    // Whether the light was on when it was paired.
+    //
+    // **The one fact about this device that cannot be worked out and cannot be
+    // measured.** The light reports nothing, so Homey's `onoff` for it is a
+    // belief — and before this step the belief started as a guess, which every
+    // subsequent toggle then preserved faithfully. Asking once turns the first
+    // value into something that was actually true.
+    //
+    // Kept on the driver rather than threaded through the base's pairing
+    // closure, because Homey pairs one device at a time and this is read in the
+    // same session that set it.
+    async onPair(session) {
+        this.pairLit = null;
+
+        session.setHandler('state', async ({ lit }) => {
+            this.pairLit = lit === true;
+            this.log(`[pair] told the light is ${this.pairLit ? 'on' : 'off'}`);
+            return true;
+        });
+
+        await super.onPair(session);
+    }
+
+    devicesFor(learned) {
+        return super.devicesFor(learned).map(device => ({
+            ...device,
+            store: { ...device.store, lit: this.pairLit },
+        }));
+    }
+
     // Re-establishing the brightness, as a repair rather than a setting: it
     // drives the light to an end stop and takes the position from there, which
     // works because both ends saturate instead of wrapping. See APP_PLAN.md.

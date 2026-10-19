@@ -15,7 +15,7 @@
     "retry": "Opnieuw proberen",
     "found_hint": "Voeg nu je ventilator toe. Homey kan hem dezelfde codes sturen als de handzender — maar de ventilator meldt niets terug, dus wat Homey toont is wat hij als laatste heeft gestuurd of meegehoord.",
     "not_learned": "Homey heeft je handzender nog niet geleerd. Ga terug en druk op een knop.",
-    "found_hint_light": "Voeg nu je lamp toe. Homey kan dezelfde codes sturen als de handzender — maar de lamp meldt niets terug, dus de helderheid wordt bijgehouden en niet gemeten. Kalibreren kan altijd via Instellingen → Onderhoud → Probeer te repareren.",
+    "found_hint_light": "Hierna heeft Homey één ding nodig dat hij zelf niet kan achterhalen: of de lamp nu aan is.",
     "timeout_restored": "Homey hoorde een Lucci-handzender, maar nooit een volledig signaal, dus het adres was niet zeker. Houd de handzender dichter bij Homey en probeer het opnieuw."
   },
   "calibrate": {
@@ -30,5 +30,13 @@
     "started_hint": "Dit duurt ongeveer {{seconds}} seconden. Je kunt dit sluiten; Homey gaat door en weet waar de lamp uitkomt.",
     "finish": "Klaar",
     "failed": "Kon niet starten"
+  },
+  "state": {
+    "title": "Lampstatus",
+    "question": "Is de lamp nu aan?",
+    "hint": "De lamp meldt nooit iets terug, dus dit is de enige kans om Homey de waarheid te vertellen in plaats van te gokken. Al het volgende volgt uit je antwoord: kijk naar de lamp, niet naar de schakelaar.",
+    "on": "Hij is aan",
+    "off": "Hij is uit",
+    "failed": "Kon dat niet opslaan"
   }
 }
