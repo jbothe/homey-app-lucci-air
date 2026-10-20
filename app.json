@@ -7,9 +7,9 @@
   "platforms": [
     "local"
   ],
-  "brandColor": "#1E1E1E",
+  "brandColor": "#231F20",
   "name": {
-    "en": "Lucci"
+    "en": "Lucci Air"
   },
   "description": {
     "en": "Ceiling fans that answer to Homey as well as the handset.",
@@ -84,8 +84,9 @@
         "fr": "Ventilateur de plafond"
       },
       "images": {
+        "small": "/drivers/fan/assets/images/small.png",
         "large": "/drivers/fan/assets/images/large.png",
-        "small": "/drivers/fan/assets/images/small.png"
+        "xlarge": "/drivers/fan/assets/images/xlarge.png"
       },
       "class": "fan",
       "platforms": [
@@ -143,8 +144,9 @@
         "fr": "Lampe de ventilateur"
       },
       "images": {
+        "small": "/drivers/light/assets/images/small.png",
         "large": "/drivers/light/assets/images/large.png",
-        "small": "/drivers/light/assets/images/small.png"
+        "xlarge": "/drivers/light/assets/images/xlarge.png"
       },
       "class": "light",
       "platforms": [

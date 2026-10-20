@@ -7,8 +7,9 @@
     "fr": "Ventilateur de plafond"
   },
   "images": {
+    "small": "/drivers/fan/assets/images/small.png",
     "large": "/drivers/fan/assets/images/large.png",
-    "small": "/drivers/fan/assets/images/small.png"
+    "xlarge": "/drivers/fan/assets/images/xlarge.png"
   },
   "class": "fan",
   "platforms": [
