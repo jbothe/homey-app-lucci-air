@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Correct on/off",
+    "nl": "Aan/uit corrigeren",
+    "de": "Ein/Aus korrigieren",
+    "fr": "Corriger marche/arrêt"
+  },
+  "getable": false,
+  "setable": true,
+  "uiComponent": "button",
+  "uiQuickAction": false
+}

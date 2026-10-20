@@ -47,7 +47,7 @@ test('app.json is in step with .homeycompose', async (t) => {
             assert.deepEqual(app.capabilities[id], capability(id), id);
         }
         assert.deepEqual(Object.keys(app.capabilities).sort(), [
-            'lucci_brighter', 'lucci_dimmer', 'lucci_direction',
+            'lucci_brighter', 'lucci_dimmer', 'lucci_direction', 'lucci_resync',
             'lucci_speed', 'lucci_timer', 'lucci_toggle',
         ]);
     });
@@ -102,7 +102,7 @@ test('the light offers what a relative protocol allows, and no more', () => {
     // end stop. The two buttons are the honest core: one tap, one step, correct
     // however the light got to where it is.
     assert.deepEqual(compose.capabilities,
-        ['onoff', 'dim', 'lucci_brighter', 'lucci_dimmer', 'lucci_toggle']);
+        ['onoff', 'dim', 'lucci_brighter', 'lucci_dimmer', 'lucci_toggle', 'lucci_resync']);
     assert.equal(compose.class, 'light');
     assert.equal(compose.rf433.satelliteMode, true);
 
@@ -117,7 +117,7 @@ test('the light offers what a relative protocol allows, and no more', () => {
 test('the brightness buttons are buttons, not switches', () => {
     // A tap, not a state: there is nothing to read back, so a getable boolean
     // would show a checkbox that means nothing.
-    for (const id of ['lucci_brighter', 'lucci_dimmer']) {
+    for (const id of ['lucci_brighter', 'lucci_dimmer', 'lucci_toggle', 'lucci_resync']) {
         const custom = capability(id);
         assert.equal(custom.type, 'boolean', id);
         assert.equal(custom.uiComponent, 'button', id);

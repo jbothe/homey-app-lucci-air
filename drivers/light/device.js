@@ -87,6 +87,7 @@ class LucciLightDevice extends Homey.Device {
         this.registerCapabilityListener('lucci_brighter', () => this.nudge(position.KEY_UP));
         this.registerCapabilityListener('lucci_dimmer', () => this.nudge(position.KEY_DOWN));
         this.registerCapabilityListener('lucci_toggle', this.onCapabilityToggle.bind(this));
+        this.registerCapabilityListener('lucci_resync', this.onCapabilityResync.bind(this));
 
         this.onRX = this.onRX.bind(this);
         try {
@@ -222,6 +223,29 @@ class LucciLightDevice extends Homey.Device {
         this.position = position.stepped(this.position, key);
         await this.rememberPosition();
         this.log(`tx ${key} (one step; ${this.describePosition()})`);
+    }
+
+    // Corrects Homey's belief without touching the light.
+    //
+    // **The only control here that transmits nothing.** Everything else sends a
+    // code and then updates the belief to match; this updates the belief alone,
+    // for when the two have come apart — the light was switched at the wall, the
+    // fitting was unpowered when Homey sent something, a handset press happened
+    // out of range. Homey has no way to find out, and until now no way to be
+    // told either.
+    //
+    // It flips rather than sets, because a button press carries no value and
+    // because the useful statement is always the same one: whatever you think,
+    // it is the other way round.
+    //
+    // Only on the light. The fan does not need one — its speed, direction and
+    // timer are absolute, so the next command or overheard press states the
+    // whole truth and any drift there is self-correcting.
+    async onCapabilityResync() {
+        this.lit = !this.lit;
+        this.log(`corrected: Homey now believes the light is ${this.lit ? 'on' : 'off'};`
+            + ' nothing was transmitted');
+        reflect(this, { onoff: this.lit });
     }
 
     // The slider. See "The slider" in APP_PLAN.md for the mechanism and

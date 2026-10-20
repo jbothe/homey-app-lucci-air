@@ -25,7 +25,8 @@
     "dim",
     "lucci_brighter",
     "lucci_dimmer",
-    "lucci_toggle"
+    "lucci_toggle",
+    "lucci_resync"
   ],
   "capabilitiesOptions": {
     "dim": {

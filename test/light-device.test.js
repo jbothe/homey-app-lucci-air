@@ -653,3 +653,57 @@ test('a stopped move from an unknown position says it cannot correct the slider'
     assert.ok(device.logs.some(line => line.includes('the brightness is not known')),
         device.logs.join(' | '));
 });
+
+test('correcting on/off changes the belief and transmits nothing', async () => {
+    // The only control here that puts no frame on air. For when Homey and the
+    // light have come apart and Homey has no way to find out — the wall switch,
+    // an unpowered fitting, a handset press out of range.
+    const device = await light({ on: false, at: 10 });
+
+    await request(device, 'lucci_resync', true);
+
+    assert.deepEqual(device.sent, [], 'a correction reached the radio');
+    assert.equal(device.lit, true);
+    assert.equal(device.capabilityValues.onoff, true, 'the tile did not follow');
+    assert.ok(device.logs.some(line => line.includes('nothing was transmitted')),
+        device.logs.join(' | '));
+});
+
+test('correcting on/off flips, so it works from either side of the mistake', async () => {
+    for (const on of [true, false]) {
+        const device = await light({ on, at: 10 });
+        await request(device, 'lucci_resync', true);
+
+        assert.equal(device.lit, !on, `from ${on}`);
+        assert.deepEqual(device.sent, []);
+    }
+});
+
+test('a corrected belief is then acted on like any other', async () => {
+    // The point of correcting it: the controls that depend on the belief start
+    // working again. Brightness is refused while the light is believed off and
+    // allowed once it is not.
+    const device = await light({ on: false, at: 10 });
+
+    await request(device, 'lucci_brighter', true);
+    assert.deepEqual(device.sent, [], 'brightness went out at a light believed off');
+
+    await request(device, 'lucci_resync', true);
+    await request(device, 'lucci_brighter', true);
+
+    assert.equal(keysSent(device).length, 1);
+    assert.equal(device.position, 11);
+});
+
+test('onoff stays idempotent against a corrected belief', async () => {
+    // Correcting it to "on" means asking for on is now a no-op, which is the
+    // whole point — the next thing you do should not toggle the light back.
+    const device = await light({ on: false, at: 10 });
+    await request(device, 'lucci_resync', true);
+
+    await request(device, 'onoff', true);
+    assert.deepEqual(device.sent, []);
+
+    await request(device, 'onoff', false);
+    assert.deepEqual(keysSent(device), ['light.onoff']);
+});

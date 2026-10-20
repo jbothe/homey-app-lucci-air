@@ -35,8 +35,9 @@ three codes has been transmitted yet.
 
 The light is the awkward one. Its on/off is a single stateless toggle and the fittings are behind
 wall switches, so Homey can never be sure the light is lit — or that the fitting has power to hear
-it. `onoff` is therefore idempotent against what Homey believes, and a toggle button sits beside it
-that claims nothing and is always correct. Six candidate command codes were tried on the hardware in
+it. `onoff` is therefore idempotent against what Homey believes, and two buttons sit beside it that
+claim nothing: one toggles the light, and one corrects Homey when the two have come apart, without
+transmitting at all. Six candidate command codes were tried on the hardware in
 the hope of a discrete on and off; none did anything.
 
 Its brightness is **relative** too, one code each way at any level, so there is nothing to read and

@@ -161,7 +161,8 @@
         "dim",
         "lucci_brighter",
         "lucci_dimmer",
-        "lucci_toggle"
+        "lucci_toggle",
+        "lucci_resync"
       ],
       "capabilitiesOptions": {
         "dim": {
@@ -255,6 +256,19 @@
           }
         }
       ]
+    },
+    "lucci_resync": {
+      "type": "boolean",
+      "title": {
+        "en": "Correct on/off",
+        "nl": "Aan/uit corrigeren",
+        "de": "Ein/Aus korrigieren",
+        "fr": "Corriger marche/arrêt"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "uiQuickAction": false
     },
     "lucci_speed": {
       "type": "enum",

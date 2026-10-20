@@ -459,7 +459,11 @@ Three things follow, and the app does all three:
    the toggle. It is an inference rather than a reading, and it is the only self-correction
    available for a belief with no feedback behind it: ordinary use of the handset quietly puts Homey
    back in step.
-4. **The first belief is asked for, not guessed.** Pairing ends with one question — is the light on
+4. **And there is a button for correcting it.** `lucci_resync` flips what Homey believes and
+   transmits nothing — the only control in the app that touches no radio. Homey cannot discover that
+   the wall switch was used; this is how it can be told, in one tap, on the tile where the mistake
+   is visible.
+5. **The first belief is asked for, not guessed.** Pairing ends with one question — is the light on
    right now — because that is the only moment someone is standing in front of the light on purpose,
    and because it is the one fact about this device that cannot be measured. Without it the belief
    began as a coin toss and every toggle afterwards preserved it faithfully. After a restart the

@@ -13,72 +13,46 @@ the pattern is established.
 Two devices rather than one, because they are two things to a user and to Homey: a `fan` and a
 `light`, each wanting its own tile, its own flow cards and its own voice control.
 
-### Why not one device, or a "fan with light" variant?
+### One device or two: the real trade
 
-It is one fitting, one address and one receiver, so the question is fair. Homey's model is what
-rules it out, on three counts:
+It is one fitting, one address and one receiver, so a single device is the more faithful
+representation of the hardware. Two were chosen and the reasoning is conditional, which is worth
+stating properly because the condition is the interesting part.
 
-- **A device has one `class`.** `fan` and `light` are what Homey keys its own behaviour off —
-  "turn off all the lights", light-specific grouping, what the tile offers, how voice assistants
-  address it. A combined device has to pick one and the other loses all of it.
-- **A device has one `onoff`**, and these two are not the same command or the same kind of
-  command: the fan's is an absolute off plus six speed codes that start it, the light's is a single
-  stateless toggle. Merging them means one becomes `lucci_light_onoff`, which no voice assistant
-  and no standard flow card knows about. "Turn off the light" stops working.
-- **A device has one `dim`.** On a device of class `fan`, Homey reads `dim` as the fan's, which is
-  not what it is.
+**Merging is impossible if the light keeps `onoff` and `dim`**, on three counts:
 
-So the cost of merging falls entirely on the light, which is the half that most needs standard
-integration. A "fan only" variant would be a reasonable *future* convenience for fans fitted
-without a light, but it would not merge anything — it is the fan driver that already exists.
+- **A device has one `class`.** `fan` and `light` are what Homey keys its own behaviour off — "turn
+  off all the lights", light grouping, what the tile offers, how a voice assistant addresses it. A
+  combined device picks one and the other loses all of it.
+- **A device has one `onoff`**, and these are not the same command or the same kind of command: the
+  fan's is an absolute off plus six speed codes that start it, the light's is a single stateless
+  toggle. Merged, one becomes `lucci_light_onoff`, which no voice assistant and no standard flow
+  card knows. "Turn off the light" stops working.
+- **A device has one `dim`.** On a device of class `fan`, Homey reads `dim` as the fan's.
 
-What the split actually costs is pairing twice, and that is cheap: every frame carries the same
-address whichever selector it has, so the second pairing is "press any button again" — a fan button
+**Merging is clean if the light drops them**, and keeps only its three event capabilities —
+`lucci_toggle`, `lucci_brighter`, `lucci_dimmer`. Then there is no second `onoff`, no `dim` to
+collide, and nothing that depends on being class `light`. One `fan` device would carry power, speed,
+direction, timer and three light buttons: every code the handset has, in one place, which is exactly
+what the handset is.
+
+So the choice is not "faithful or not". It is **standard integration for the light, or a faithful
+single device** — and the three capabilities that make merging possible are the honest ones, the
+ones that need no state and are correct however the light got to where it is. The state-carrying two
+are what force the split, and they are also the two that can be wrong.
+
+The split is kept because `onoff` and `dim` on a real `light` device are worth a lot to a user:
+voice control, flows that read whether the light is on, the standard tile, light grouping. But it is
+a judgement, not a consequence, and **if tracking the light's on/off is ever judged not worth it,
+merging into one device becomes the better design rather than a compromise.** That question is open;
+see "Known state drift".
+
+A **"fan only"** variant would be a reasonable convenience for fans fitted without a light. It
+merges nothing — it is the fan driver that already exists, advertised differently.
+
+What the split costs in practice is pairing twice, and that is cheap: every frame carries the same
+address whichever selector it has, so the second pairing is "press any button again". A fan button
 pairs the light perfectly well, which is how it was done on the hardware.
-
-```
-lib/lucci-protocol.js    the sixteen codes, frame building, identification
-drivers/fan/             class "fan"
-drivers/light/           class "light"
-```
-
-## Fan capabilities
-
-| Capability | Type | Why it can exist |
-|---|---|---|
-| `onoff` | standard | — |
-| `lucci_speed` | enum, 6 steps | speed is **absolute**: each step has its own code |
-| `lucci_direction` | enum, forward/reverse | direction is **absolute** |
-| `lucci_timer` | enum, off/2h/4h/8h | the timer is **absolute** |
-
-Custom enums with `uiComponent: "picker"` and `preventInsights: true`, matching the sibling RC300
-app's `fan_level` and `flame_level`.
-
-**`onoff` is asymmetric, because the protocol is.** There is no "fan on" command — only an off code
-and six absolute speed codes. So `false` sends the off code, and `true` sends the stored speed's
-code, which is exactly how the handset behaves: the user observed the fan starting when a speed
-button is pressed. Setting `lucci_speed` therefore implies `onoff` true. **Confirmed on the
-hardware**, in both directions and from standing.
-
-**The two share one debounced listener**, which is Homey's documented pattern for capabilities that
-map to a single command, as `onoff` and `dim` do on a light. Three reasons here, two of them found
-by running it:
-
-- Every frame this driver sends is one absolute speed code or the off code. There is never a power
-  command *and* a speed to coordinate, so two listeners were two routes to the same single frame.
-- `onoff` leads when one request carries both, so a flow asking for off and a speed at once sends
-  one frame rather than two contradictory ones.
-- **A drag across the picker emits a value per step.** The first run put three on air inside 2.1
-  seconds, each ~423ms of airtime, so they were queuing behind each other. Debounced at Homey's
-  default 250ms a drag is one transmission of the step it landed on — and because speed is absolute,
-  that was the only one carrying any information anyway.
-
-**Implying `onoff` has to be written after the listener resolves, not inside it.** Setting it from
-within the speed listener did not stick: the picker transmitted, the fan moved, and the tile stayed
-off until an `onoff` toggle — which did nothing, the fan already running — put it right. Homey writes
-the capabilities a request carried when the listener resolves, so the implied one waits its turn and
-then reads itself back, which is what makes a log able to settle this rather than a user noticing it
-again.
 
 ## The light's first belief is asked for
 
@@ -320,6 +294,18 @@ Worth stating in the app's own documentation rather than discovering in a suppor
 
 - **The timer has no feedback.** `lucci_timer` reflects what was last commanded, not time remaining,
   and the app cannot know when the fan's timer expires.
+- **Whether the light's `onoff` is worth tracking at all is an open question.** Everything below is
+  mitigation of a value that can never be verified, and the three event capabilities — toggle,
+  brighter, dimmer — need none of it and are always correct. Dropping `onoff` and `dim` would cost
+  voice control, flow conditions, the standard light tile and light grouping, and would buy a
+  faithful single device (see "One device or two") and the end of an entire class of bug. It has not
+  been dropped; it has not been settled either.
+- **There is a button for putting it right.** `lucci_resync` flips Homey's belief and transmits
+  nothing — the only control here that touches no radio. It is the answer to "the light is on and
+  Homey says off", which Homey cannot otherwise find out and, before it, could not be told. A flow
+  action would do the same job and was rejected as the primary route: correcting a mistake should
+  take one tap on the tile where the mistake is visible, not a flow built in advance for a problem
+  that had not happened yet.
 - **The light's on/off cannot be trusted, and these fans are behind wall switches.** With the
   fitting unpowered every command Homey sends does nothing, with no error and nothing to detect, so
   Homey cannot know whether the light is lit or whether the fitting is even listening. Three things
