@@ -16,7 +16,8 @@
     "found_hint": "Next, add your fan. Homey can now send it the same codes as the handset — but the fan reports nothing back, so what Homey shows is what it last commanded or overheard.",
     "not_learned": "Homey hasn't learned your handset yet. Go back and press a button on it.",
     "found_hint_light": "Next, Homey needs one thing it cannot work out for itself: whether the light is on right now.",
-    "timeout_restored": "Homey heard a Lucci handset but never a complete signal, so it could not be sure of the address. Move the handset closer to Homey and try again."
+    "timeout_restored": "Homey heard a Lucci handset but never a complete signal, so it could not be sure of the address. Move the handset closer to Homey and try again.",
+    "title_light": "Add light"
   },
   "calibrate": {
     "title": "Calibrate brightness",

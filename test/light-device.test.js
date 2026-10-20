@@ -608,3 +608,48 @@ test('Homey\'s own brightness presses are still refused while it is off', async 
     assert.deepEqual(device.sent, []);
     assert.equal(device.lit, false);
 });
+
+test('a cancelled move takes back what the slider promised', async () => {
+    // Reported from the hardware: turning the light off halfway through a
+    // 100%-to-0% move left the slider reading 0% with the light at about half,
+    // and it stayed wrong when the light came back on — the fitting remembers
+    // its level, and Homey had stopped tracking it.
+    const device = await light({ at: position.MAX });
+
+    device.listeners.dim(0, {});
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(device.capabilityValues.dim, 0, 'the slider did not show the target');
+
+    // The light goes off partway, which cancels the move.
+    await request(device, 'onoff', false);
+
+    assert.ok(device.position > position.MIN, `position ${device.position}`);
+    assert.equal(device.capabilityValues.dim, position.toDim(device.position),
+        'the slider kept a promise the move did not');
+});
+
+test('a completed move leaves the slider where it already was', async () => {
+    // The correction must be invisible when the move arrives, or the slider
+    // would twitch at the end of every adjustment.
+    const device = await light({ at: 10 });
+    await request(device, 'dim', position.toDim(16));
+
+    assert.equal(device.position, 16);
+    assert.equal(device.capabilityValues.dim, position.toDim(16));
+});
+
+test('a stopped move from an unknown position says it cannot correct the slider', async () => {
+    // Nothing truthful to show: `dim` has no way to say unknown. The next move
+    // saturates to an end first, so the display is wrong until then and the
+    // behaviour is not.
+    const device = await light({ at: undefined });
+    assert.equal(device.position, null);
+
+    device.listeners.dim(position.toDim(20), {});
+    await new Promise(resolve => setTimeout(resolve, 20));
+    device.cancelMove('a test');
+    await device.moving;
+
+    assert.ok(device.logs.some(line => line.includes('the brightness is not known')),
+        device.logs.join(' | '));
+});

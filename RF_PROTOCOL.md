@@ -384,6 +384,10 @@ preamble mismatches confined to the first four positions — that is, to the art
   sits between two that were. **The three light codes remain unsent** — the light driver is written
   and its codes are built the same way from the same tables, which is reason to expect them to work
   and not evidence that they do.
+- **The light keeps its brightness across off and on.** Observed: a move was interrupted by turning
+  the light off at about half, and it came back on at about half. So the level lives in the fitting
+  and survives the toggle, which is why Homey's position estimate is not thrown away when the light
+  goes off — and why a stale estimate stays wrong rather than being reset by a power cycle.
 - **A direction code starts a stopped fan**, confirmed, so it is a power command as much as a
   setting. **Whether a timer code does is still unknown** — it has only been sent to a fan already
   running, and a direction code's behaviour is no evidence about it.

@@ -13,6 +13,29 @@ the pattern is established.
 Two devices rather than one, because they are two things to a user and to Homey: a `fan` and a
 `light`, each wanting its own tile, its own flow cards and its own voice control.
 
+### Why not one device, or a "fan with light" variant?
+
+It is one fitting, one address and one receiver, so the question is fair. Homey's model is what
+rules it out, on three counts:
+
+- **A device has one `class`.** `fan` and `light` are what Homey keys its own behaviour off —
+  "turn off all the lights", light-specific grouping, what the tile offers, how voice assistants
+  address it. A combined device has to pick one and the other loses all of it.
+- **A device has one `onoff`**, and these two are not the same command or the same kind of
+  command: the fan's is an absolute off plus six speed codes that start it, the light's is a single
+  stateless toggle. Merging them means one becomes `lucci_light_onoff`, which no voice assistant
+  and no standard flow card knows about. "Turn off the light" stops working.
+- **A device has one `dim`.** On a device of class `fan`, Homey reads `dim` as the fan's, which is
+  not what it is.
+
+So the cost of merging falls entirely on the light, which is the half that most needs standard
+integration. A "fan only" variant would be a reasonable *future* convenience for fans fitted
+without a light, but it would not merge anything — it is the fan driver that already exists.
+
+What the split actually costs is pairing twice, and that is cheap: every frame carries the same
+address whichever selector it has, so the second pairing is "press any button again" — a fan button
+pairs the light perfectly well, which is how it was done on the hardware.
+
 ```
 lib/lucci-protocol.js    the sixteen codes, frame building, identification
 drivers/fan/             class "fan"
@@ -314,6 +337,14 @@ Worth stating in the app's own documentation rather than discovering in a suppor
   around the toggle were tried on the hardware and none did anything; see RF_PROTOCOL.md. The other
   55 unexplored values are not a cheap experiment, because that space almost certainly contains the
   fitting's pairing and reset commands.
+- **The slider shows the target while a move runs, and takes it back if the move does not finish.**
+  A full-range move is twenty seconds, so a slider that waited for the radio would read as broken —
+  but that promise is only honest if it is kept. Turning the light off halfway through a 100%-to-0%
+  move left the slider at 0% with the light at about half, and it stayed wrong when the light came
+  back on, because the fitting remembers its level. A stopped move now snaps the slider back to what
+  is believed; from an unknown position there is nothing truthful to show, and the next move
+  saturates to an end before positioning, so the display is wrong until then and the behaviour is
+  not.
 - **The `dim` slider's position is an estimate between moves**, corrected by what the app overhears
   and re-anchored by calibrating, which works because the light saturates at both ends rather than
   wrapping. Each individual step is exact — one press, one step — so error enters only by missing

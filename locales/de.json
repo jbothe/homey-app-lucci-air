@@ -16,7 +16,8 @@
     "found_hint": "Füge nun deinen Ventilator hinzu. Homey kann ihm dieselben Codes senden wie der Handsender — der Ventilator meldet aber nichts zurück, daher zeigt Homey, was zuletzt gesendet oder mitgehört wurde.",
     "not_learned": "Homey hat deinen Handsender noch nicht gelernt. Gehe zurück und drücke eine Taste.",
     "found_hint_light": "Als Nächstes braucht Homey eine Angabe, die es selbst nicht ermitteln kann: ob das Licht gerade an ist.",
-    "timeout_restored": "Homey hat einen Lucci-Handsender gehört, aber nie ein vollständiges Signal, daher war die Adresse nicht sicher. Bringe den Handsender näher an Homey und versuche es erneut."
+    "timeout_restored": "Homey hat einen Lucci-Handsender gehört, aber nie ein vollständiges Signal, daher war die Adresse nicht sicher. Bringe den Handsender näher an Homey und versuche es erneut.",
+    "title_light": "Lampe hinzufügen"
   },
   "calibrate": {
     "title": "Helligkeit kalibrieren",

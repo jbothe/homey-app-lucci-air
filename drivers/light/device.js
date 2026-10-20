@@ -304,8 +304,7 @@ class LucciLightDevice extends Homey.Device {
         for (const move of made.moves) {
             for (let i = 0; i < move.presses; i += 1) {
                 if (token.cancelled) {
-                    await this.rememberPosition();
-                    this.log(`move stopped after ${sent}/${total} presses; ${this.describePosition()}`);
+                    await this.stopped(sent, total, token);
                     return;
                 }
 
@@ -314,12 +313,11 @@ class LucciLightDevice extends Homey.Device {
                 if (outcome === 'skipped') {
                     // Cancelled while this press waited its turn, so it never
                     // went out and is not a step.
-                    await this.rememberPosition();
-                    this.log(`move stopped after ${sent}/${total} presses; ${this.describePosition()}`);
+                    await this.stopped(sent, total, token);
                     return;
                 }
                 if (outcome === 'failed') {
-                    await this.rememberPosition();
+                    await this.stopped(sent, total, token);
                     throw new Error(`transmission failed after ${sent}/${total} presses`);
                 }
 
@@ -342,7 +340,16 @@ class LucciLightDevice extends Homey.Device {
         }
 
         await this.rememberPosition();
+        await this.showPosition();
         this.log(`move (${token.why}) done in ${Date.now() - startedAt}ms; ${this.describePosition()}`);
+    }
+
+    // A move that ended before it arrived. The slider promised the target; this
+    // is where that promise is taken back.
+    async stopped(sent, total, token) {
+        await this.rememberPosition();
+        await this.showPosition();
+        this.log(`move (${token.why}) stopped after ${sent}/${total} presses; ${this.describePosition()}`);
     }
 
     wait(ms) {
@@ -352,6 +359,29 @@ class LucciLightDevice extends Homey.Device {
     async rememberPosition() {
         await this.setStoreValue('position', this.position)
             .catch(err => this.error('could not remember the brightness:', err.message));
+    }
+
+    // Brings the slider back to what is believed, after a move stops short of
+    // what it promised.
+    //
+    // **`dim` is shown optimistically while a move runs** — a full-range move is
+    // twenty seconds and a slider that did not move until the radio finished
+    // would read as broken. That is only honest if the promise is kept, and a
+    // cancelled move does not keep it. Turning the light off halfway through a
+    // 100%-to-0% move left the slider reading 0% with the light sitting at about
+    // half, and it stayed that way when the light came back on, because the
+    // fitting remembers its level and Homey had stopped tracking it.
+    //
+    // When the position is not known there is nothing truthful to show and the
+    // slider keeps the target. `dim` has no way to say "unknown"; the next move
+    // from an unknown position saturates to an end first, so the display is
+    // wrong until then and the behaviour is not.
+    async showPosition() {
+        if (this.position === null) {
+            this.log('slider left showing the target: the brightness is not known');
+            return;
+        }
+        await this.set('dim', position.toDim(this.position));
     }
 
     describePosition() {

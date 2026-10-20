@@ -226,13 +226,26 @@ test('every string the app asks for is in every locale', () => {
     // validates and packages cleanly. These are the keys the driver, the device
     // and the pair view actually ask for.
     const used = new Set();
+    // Every view, found rather than listed: state.html was added and missed off
+    // this list, so its strings went unchecked — and a missing one renders the
+    // key itself into the pairing wizard.
+    const views = fs.readdirSync(path.join(root, 'drivers'))
+        .flatMap(driver => ['pair', 'repair'].flatMap(kind => {
+            const dir = path.join(root, 'drivers', driver, kind);
+            if (!fs.existsSync(dir)) return [];
+            return fs.readdirSync(dir)
+                .filter(file => file.endsWith('.html'))
+                .map(file => `drivers/${driver}/${kind}/${file}`);
+        }));
+    assert.ok(views.length >= 3, `only found ${views.length} views; the walk has stopped working`);
+
     const sources = [
         'lib/lucci-driver.js',
         'drivers/fan/driver.js', 'drivers/fan/device.js', 'drivers/fan/pair/learn.html',
         'drivers/light/driver.js', 'drivers/light/device.js', 'drivers/light/pair/learn.html',
-        'drivers/light/repair/calibrate.html',
+        'drivers/light/pair/state.html', 'drivers/light/repair/calibrate.html',
     ];
-    for (const file of sources) {
+    for (const file of [...new Set([...sources, ...views])]) {
         const source = fs.readFileSync(path.join(root, file), 'utf8');
         for (const [, key] of source.matchAll(/__\(\s*'([a-z_]+\.[a-z_]+)'\s*\)/g)) used.add(key);
     }

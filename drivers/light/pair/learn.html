@@ -88,7 +88,9 @@
     // hidden, which is every state but the failed one.
     var onAction = null;
 
-    Homey.setTitle(Homey.__('pair.title'));
+    // The light's own title: this view is shared in shape with the fan's, and
+    // the fan's copy said "Add fan" over the light's pairing.
+    Homey.setTitle(Homey.__('pair.title_light'));
 
     function setState(state, messageText, hintText, buttonKey) {
         container.className = 'lucci-learn is-' + state;
