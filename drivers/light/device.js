@@ -11,7 +11,7 @@ const { pressQueue, PRESS_INTERVAL } = require('../../lib/press-queue');
 // of a step or two is done inside this; only the long moves get a line.
 const SLOW_MOVE = 3000;
 
-class LucciLightDevice extends Homey.Device {
+class LucciAirLightDevice extends Homey.Device {
     async onInit() {
         this.signal = this.homey.rf.getSignal433(SIGNAL_ID);
 
@@ -505,4 +505,4 @@ class LucciLightDevice extends Homey.Device {
     }
 }
 
-module.exports = LucciLightDevice;
+module.exports = LucciAirLightDevice;

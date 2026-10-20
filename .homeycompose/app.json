@@ -17,10 +17,10 @@
     "fr": "Ventilateurs de plafond qui obéissent à Homey comme à la télécommande."
   },
   "tags": {
-    "en": ["lucci", "fan", "ceiling fan", "fan light", "remote", "handset", "433"],
-    "nl": ["lucci", "ventilator", "plafondventilator", "ventilatorlamp", "afstandsbediening", "handzender", "433"],
-    "de": ["lucci", "ventilator", "deckenventilator", "ventilatorlampe", "fernbedienung", "handsender", "433"],
-    "fr": ["lucci", "ventilateur", "ventilateur de plafond", "lampe de ventilateur", "télécommande", "433"]
+    "en": ["lucci", "lucci air", "fan", "ceiling fan", "fan light", "remote", "handset", "433"],
+    "nl": ["lucci", "lucci air", "ventilator", "plafondventilator", "ventilatorlamp", "afstandsbediening", "handzender", "433"],
+    "de": ["lucci", "lucci air", "ventilator", "deckenventilator", "ventilatorlampe", "fernbedienung", "handsender", "433"],
+    "fr": ["lucci", "lucci air", "ventilateur", "ventilateur de plafond", "lampe de ventilateur", "télécommande", "433"]
   },
   "category": [
     "climate"

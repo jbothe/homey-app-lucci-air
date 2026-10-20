@@ -1,9 +1,9 @@
 'use strict';
 
-const LucciDriver = require('../../lib/lucci-driver');
+const LucciAirDriver = require('../../lib/lucci-driver');
 
 // Receiving, learning an address off the handset and offering a device are all
-// in LucciDriver, identically to the fan: every frame carries the same 16-bit
+// in LucciAirDriver, identically to the fan: every frame carries the same 16-bit
 // address whichever selector it has, so either handset button pairs either
 // device. What is left here is what a light is.
 //
@@ -11,7 +11,7 @@ const LucciDriver = require('../../lib/lucci-driver');
 // driver. APP_PLAN.md describes one learn step offering both; that is not
 // something Homey can do, and pressing a button twice is a small price for two
 // devices that each get their own tile, flow cards and voice control.
-class LucciLightDriver extends LucciDriver {
+class LucciAirLightDriver extends LucciAirDriver {
     get deviceIdPrefix() { return 'lucci-light'; }
 
     // Whether the light was on when it was paired.
@@ -53,4 +53,4 @@ class LucciLightDriver extends LucciDriver {
     }
 }
 
-module.exports = LucciLightDriver;
+module.exports = LucciAirLightDriver;

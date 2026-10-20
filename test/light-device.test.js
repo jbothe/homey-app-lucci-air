@@ -64,7 +64,7 @@ Module._resolveFilename = function (request, ...rest) {
     return request === 'homey' ? STUB : resolveFilename.call(this, request, ...rest);
 };
 
-const LucciLightDevice = require('../drivers/light/device');
+const LucciAirLightDevice = require('../drivers/light/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
@@ -72,7 +72,7 @@ const ADDRESS = '0101110011110011'.split('').map(Number);
 // looks like — the case the pair-time question exists for. `told` is the answer
 // that question stored.
 async function light({ on = true, at, bit24 = 0, told } = {}) {
-    const device = new LucciLightDevice();
+    const device = new LucciAirLightDevice();
     device.storeValues.address = ADDRESS;
     if (bit24 !== null) device.storeValues.bit24 = bit24;
     if (at !== undefined) device.storeValues.position = at;
@@ -102,7 +102,7 @@ async function receive(device, key, isFirst = true) {
 }
 
 test('a light with no stored address refuses to transmit', async () => {
-    const device = new LucciLightDevice();
+    const device = new LucciAirLightDevice();
     await device.onInit();
 
     assert.equal(device.unavailable, 'errors.not_paired');

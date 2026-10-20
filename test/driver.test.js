@@ -62,10 +62,10 @@ Module._resolveFilename = function (request, ...rest) {
     return request === 'homey' ? STUB : resolveFilename.call(this, request, ...rest);
 };
 
-const LucciFanDriver = require('../drivers/fan/driver');
-const LucciLightDriver = require('../drivers/light/driver');
+const LucciAirFanDriver = require('../drivers/fan/driver');
+const LucciAirLightDriver = require('../drivers/light/driver');
 // The real app, because the receiver it owns is what these tests are about.
-const LucciApp = require('../app');
+const LucciAirApp = require('../app');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
@@ -73,9 +73,9 @@ const ADDRESS = '0101110011110011'.split('').map(Number);
 const session = () => ({ emitted: [], emit: async function (event, data) { this.emitted.push({ event, data }); } });
 
 // An app with one driver on it, which is what most of these need.
-async function driver(Kind = LucciFanDriver) {
+async function driver(Kind = LucciAirFanDriver) {
     const { homey, state } = homeyStub();
-    const app = new LucciApp(homey);
+    const app = new LucciAirApp(homey);
     await app.onInit();
     homey.app = app;
 
@@ -315,12 +315,12 @@ test('the two drivers share one receiver, counted once', async () => {
     // all: pairing a light used to finish by calling disableRX and leave the fan
     // — still registered, its own driver's count untouched — deaf.
     const { homey, state } = homeyStub();
-    const app = new LucciApp(homey);
+    const app = new LucciAirApp(homey);
     await app.onInit();
     homey.app = app;
 
-    const fan = new LucciFanDriver(homey);
-    const light = new LucciLightDriver(homey);
+    const fan = new LucciAirFanDriver(homey);
+    const light = new LucciAirLightDriver(homey);
     await fan.onInit();
     await light.onInit();
 
@@ -348,12 +348,12 @@ test('the two drivers share one receiver, counted once', async () => {
 
 test('a frame reaches listeners registered through either driver', async () => {
     const { homey, state } = homeyStub();
-    const app = new LucciApp(homey);
+    const app = new LucciAirApp(homey);
     await app.onInit();
     homey.app = app;
 
-    const fan = new LucciFanDriver(homey);
-    const light = new LucciLightDriver(homey);
+    const fan = new LucciAirFanDriver(homey);
+    const light = new LucciAirLightDriver(homey);
     await fan.onInit();
     await light.onInit();
 
@@ -386,7 +386,7 @@ test('the light driver asks whether the light is on, and stores the answer', asy
     // during pairing because that is the only moment someone is standing in
     // front of the light on purpose.
     for (const lit of [true, false]) {
-        const light = await driver(LucciLightDriver);
+        const light = await driver(LucciAirLightDriver);
         const handlers = {};
         const view = session();
         view.setHandler = (event, handler) => { handlers[event] = handler; };
@@ -409,7 +409,7 @@ test('the light driver asks whether the light is on, and stores the answer', asy
 test('a light paired without answering stores no answer rather than a guess', async () => {
     // The view offers no way past the question, so this should not happen — and
     // if it does, the device assumes off rather than inheriting a stale answer.
-    const light = await driver(LucciLightDriver);
+    const light = await driver(LucciAirLightDriver);
     const handlers = {};
     const view = session();
     view.setHandler = (event, handler) => { handlers[event] = handler; };

@@ -1,7 +1,7 @@
 {
   "name": "com.lucci.fan",
   "version": "0.1.0",
-  "description": "Lucci 433 MHz ceiling fans, reverse-engineered from the handset.",
+  "description": "Lucci Air 433 MHz ceiling fans, reverse-engineered from the handset.",
   "main": "app.js",
   "license": "GPL-3.0",
   "author": "John Bothe <jbothe@gmail.com>",

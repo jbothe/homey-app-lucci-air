@@ -1,4 +1,4 @@
-# Recording the Lucci handset
+# Recording the Lucci Air handset
 
 Phase 1: get the handset's transmissions onto disk, and turn them into a signal profile the
 Homey app can use. Nothing here needs the fan — only the remote, in range of the Homey.
@@ -64,7 +64,7 @@ Durations may run over as many lines as the recorder gives you. Lines beginning 
 ignored, so notes are fine.
 
 ```
-# Lucci handset, kitchen fan. Recorded 2026-10-19.
+# Lucci Air handset, kitchen fan. Recorded 2026-10-19.
 # Fan running and light on unless a block says otherwise.
 
 Fan On/Off:
@@ -122,7 +122,7 @@ from this one.
 ## What one handset cannot tell you
 
 Every recording comes from one remote, so the analysis cannot distinguish a field that identifies
-*this* handset from one that is the same on every Lucci remote ever made. It also cannot show
+*this* handset from one that is the same on every Lucci Air remote ever made. It also cannot show
 whether part of the address is really a fixed manufacturer prefix.
 
 The field map is honest about a related limit: a position only reads as "command" if some button

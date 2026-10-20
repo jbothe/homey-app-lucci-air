@@ -7,16 +7,16 @@
   "pair": {
     "title": "Add fan",
     "listening": "Press a button on your handset",
-    "listening_hint": "Hold the Lucci handset near Homey and press any button, so Homey can learn which fan it belongs to.",
+    "listening_hint": "Hold the Lucci Air handset near Homey and press any button, so Homey can learn which fan it belongs to.",
     "heard": "Signals heard:",
     "found": "Handset found",
     "failed": "Couldn't find your handset",
-    "timeout": "Homey didn't hear a press from a Lucci handset. Move the handset closer to Homey and try again.",
+    "timeout": "Homey didn't hear a press from a Lucci Air handset. Move the handset closer to Homey and try again.",
     "retry": "Try again",
     "found_hint": "Next, add your fan. Homey can now send it the same codes as the handset — but the fan reports nothing back, so what Homey shows is what it last commanded or overheard.",
     "not_learned": "Homey hasn't learned your handset yet. Go back and press a button on it.",
     "found_hint_light": "Next, Homey needs one thing it cannot work out for itself: whether the light is on right now.",
-    "timeout_restored": "Homey heard a Lucci handset but never a complete signal, so it could not be sure of the address. Move the handset closer to Homey and try again.",
+    "timeout_restored": "Homey heard a Lucci Air handset but never a complete signal, so it could not be sure of the address. Move the handset closer to Homey and try again.",
     "title_light": "Add light"
   },
   "calibrate": {

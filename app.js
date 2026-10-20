@@ -23,7 +23,7 @@ const UNRECOGNISED_LOG_INTERVAL = 60000;
 // Four seconds is nothing. The same shape with the light paired last and the fan
 // following the handset is a fan that silently stops keeping up, which is the
 // kind of fault that gets noticed as "Homey shows the wrong speed sometimes".
-class LucciApp extends Homey.App {
+class LucciAirApp extends Homey.App {
     async onInit() {
         this.unrecognisedSinceLog = 0;
         this.lastUnrecognisedLog = 0;
@@ -33,7 +33,7 @@ class LucciApp extends Homey.App {
         this.signal = this.homey.rf.getSignal433(SIGNAL_ID);
         this.signal.on('payload', this.onPayload.bind(this));
 
-        this.log('Lucci is running...');
+        this.log('Lucci Air is running...');
     }
 
     onPayload(payload, isFirst, deviation) {
@@ -88,4 +88,4 @@ class LucciApp extends Homey.App {
     }
 }
 
-module.exports = LucciApp;
+module.exports = LucciAirApp;

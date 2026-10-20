@@ -1,12 +1,12 @@
 'use strict';
 
-const LucciDriver = require('../../lib/lucci-driver');
+const LucciAirDriver = require('../../lib/lucci-driver');
 
 // Everything about receiving, about learning an address off the handset, and
-// about offering a device once one is learned is in LucciDriver — the light
+// about offering a device once one is learned is in LucciAirDriver — the light
 // driver needs all of it identically. What is left here is what a fan is.
-class LucciFanDriver extends LucciDriver {
+class LucciAirFanDriver extends LucciAirDriver {
     get deviceIdPrefix() { return 'lucci-fan'; }
 }
 
-module.exports = LucciFanDriver;
+module.exports = LucciAirFanDriver;

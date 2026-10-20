@@ -64,7 +64,7 @@ test('clusterDurations flags a class too wide to be one duration', () => {
     // But a class sitting right at a tight cap is the ordinary case, not a
     // warning: inferAlignment tries every cap and keeps whichever reading fits
     // best, so flagging that would warn on every clean capture. This is what
-    // the real Lucci recordings do, at 282-312us.
+    // the real Lucci Air recordings do, at 282-312us.
     const [tight] = clusterDurations([282, 295, 312], { maxWidth: 1.12 });
     assert.equal(tight.suspect, false);
 });
@@ -284,7 +284,7 @@ test('a repeat that began mid-preamble does not veto the reading', () => {
 });
 
 test('a long preamble of repeated pulses is found, odd length and all', () => {
-    // The Lucci handset opens with ten short pulses rather than one long one,
+    // The Lucci Air handset opens with ten short pulses rather than one long one,
     // which comes to an odd number of durations and so shifts the payload onto
     // the offsets the preamble's gaps used.
     const frame = '0101110011110011101010100';
@@ -336,7 +336,7 @@ const chop = (value) => {
 };
 
 test('repairSpikes merges a pulse the recorder reported as several', () => {
-    // 262,208,10 in place of one 480us pulse, as the real Lucci recordings
+    // 262,208,10 in place of one 480us pulse, as the real Lucci Air recordings
     // contain. The fragments sum back to a real duration, which is what marks
     // them as invented transitions rather than a mistimed edge.
     const clean = synthesise({ ...BINARY, frames: repeat(bits(BINARY_FRAME), 6), jitter: 8 });
@@ -421,7 +421,7 @@ test('one chopped pulse per repeat does not cost the whole reading', () => {
 
 test('a capture holding several presses reports them in the order sent', () => {
     // The recorder keeps running, so one recording can hold a whole sequence of
-    // presses. For a button that cycles through states — the Lucci timer walks
+    // presses. For a button that cycles through states — the Lucci Air timer walks
     // a zero across four positions — the order is the finding: it is what shows
     // the cycle, and what shows it closing. Ranking readings by how often each
     // appeared hides both completely.

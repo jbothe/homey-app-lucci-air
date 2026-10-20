@@ -75,12 +75,12 @@ Module._resolveFilename = function (request, ...rest) {
     return request === 'homey' ? STUB : resolveFilename.call(this, request, ...rest);
 };
 
-const LucciFanDevice = require('../drivers/fan/device');
+const LucciAirFanDevice = require('../drivers/fan/device');
 
 const ADDRESS = '0101110011110011'.split('').map(Number);
 
 async function device({ speed, onoff, bit24 = 0 } = {}) {
-    const fan = new LucciFanDevice();
+    const fan = new LucciAirFanDevice();
     fan.storeValues.address = ADDRESS;
     if (bit24 !== null) fan.storeValues.bit24 = bit24;
     if (speed !== undefined) fan.capabilityValues.lucci_speed = speed;
@@ -117,7 +117,7 @@ async function receive(fan, payload, isFirst = true) {
 const keysSent = fan => fan.sent.map(payload => identifyFrame(payload).key);
 
 test('a device with no stored address refuses to transmit', async () => {
-    const fan = new LucciFanDevice();
+    const fan = new LucciAirFanDevice();
     await fan.onInit();
 
     assert.equal(fan.unavailable, 'errors.not_paired');
@@ -125,7 +125,7 @@ test('a device with no stored address refuses to transmit', async () => {
 });
 
 test('an address of the wrong length is no address at all', async () => {
-    const fan = new LucciFanDevice();
+    const fan = new LucciAirFanDevice();
     fan.storeValues.address = ADDRESS.slice(1);
     await fan.onInit();
 
@@ -522,7 +522,7 @@ const SECOND = '1001011000110101'.split('').map(Number);
 
 test('two fans transmit their own address and nothing else', async () => {
     const mine = await device({ speed: '2', onoff: false, bit24: 0 });
-    const theirs = new LucciFanDevice();
+    const theirs = new LucciAirFanDevice();
     theirs.storeValues.address = SECOND;
     theirs.storeValues.bit24 = 1;
     theirs.capabilityValues.lucci_speed = '2';

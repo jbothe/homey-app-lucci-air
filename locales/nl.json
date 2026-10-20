@@ -7,16 +7,16 @@
   "pair": {
     "title": "Ventilator toevoegen",
     "listening": "Druk op een knop van je handzender",
-    "listening_hint": "Houd de Lucci-handzender bij Homey en druk op een willekeurige knop, zodat Homey weet bij welke ventilator hij hoort.",
+    "listening_hint": "Houd de Lucci Air-handzender bij Homey en druk op een willekeurige knop, zodat Homey weet bij welke ventilator hij hoort.",
     "heard": "Signalen gehoord:",
     "found": "Handzender gevonden",
     "failed": "Handzender niet gevonden",
-    "timeout": "Homey heeft geen druk op een Lucci-handzender gehoord. Houd de handzender dichter bij Homey en probeer het opnieuw.",
+    "timeout": "Homey heeft geen druk op een Lucci Air-handzender gehoord. Houd de handzender dichter bij Homey en probeer het opnieuw.",
     "retry": "Opnieuw proberen",
     "found_hint": "Voeg nu je ventilator toe. Homey kan hem dezelfde codes sturen als de handzender — maar de ventilator meldt niets terug, dus wat Homey toont is wat hij als laatste heeft gestuurd of meegehoord.",
     "not_learned": "Homey heeft je handzender nog niet geleerd. Ga terug en druk op een knop.",
     "found_hint_light": "Hierna heeft Homey één ding nodig dat hij zelf niet kan achterhalen: of de lamp nu aan is.",
-    "timeout_restored": "Homey hoorde een Lucci-handzender, maar nooit een volledig signaal, dus het adres was niet zeker. Houd de handzender dichter bij Homey en probeer het opnieuw.",
+    "timeout_restored": "Homey hoorde een Lucci Air-handzender, maar nooit een volledig signaal, dus het adres was niet zeker. Houd de handzender dichter bij Homey en probeer het opnieuw.",
     "title_light": "Lamp toevoegen"
   },
   "calibrate": {

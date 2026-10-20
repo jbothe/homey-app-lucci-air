@@ -37,7 +37,7 @@ const DEBOUNCE = 250;
 // the light driver must not reuse this.
 const RX_REPEAT_WINDOW = 2000;
 
-class LucciFanDevice extends Homey.Device {
+class LucciAirFanDevice extends Homey.Device {
     async onInit() {
         this.signal = this.homey.rf.getSignal433(SIGNAL_ID);
 
@@ -267,7 +267,7 @@ class LucciFanDevice extends Homey.Device {
         reflect(this, { onoff: true, lucci_speed: step }, values);
     }
 
-    // Every Lucci frame Homey receives, from any handset in range.
+    // Every Lucci Air frame Homey receives, from any handset in range.
 
     // Whether a received frame agrees with this device about bit 24.
     //
@@ -368,4 +368,4 @@ class LucciFanDevice extends Homey.Device {
     }
 }
 
-module.exports = LucciFanDevice;
+module.exports = LucciAirFanDevice;

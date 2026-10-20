@@ -69,7 +69,7 @@ const TABLE = {
     interval: 18000,
 };
 
-// Lucci-shaped: a preamble of ten short pulses rather than one long one, which
+// Lucci Air-shaped: a preamble of ten short pulses rather than one long one, which
 // comes to an odd number of durations and so shifts the payload onto the
 // offsets the preamble's gaps used. Its last symbol keeps its own gap, so the
 // gap between repeats arrives as a duration of its own.

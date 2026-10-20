@@ -7,16 +7,16 @@
   "pair": {
     "title": "Ajouter un ventilateur",
     "listening": "Appuyez sur une touche de votre télécommande",
-    "listening_hint": "Tenez la télécommande Lucci près de Homey et appuyez sur n'importe quelle touche, pour que Homey sache à quel ventilateur elle appartient.",
+    "listening_hint": "Tenez la télécommande Lucci Air près de Homey et appuyez sur n'importe quelle touche, pour que Homey sache à quel ventilateur elle appartient.",
     "heard": "Signaux entendus :",
     "found": "Télécommande trouvée",
     "failed": "Télécommande introuvable",
-    "timeout": "Homey n'a entendu aucun appui sur une télécommande Lucci. Rapprochez la télécommande de Homey et réessayez.",
+    "timeout": "Homey n'a entendu aucun appui sur une télécommande Lucci Air. Rapprochez la télécommande de Homey et réessayez.",
     "retry": "Réessayer",
     "found_hint": "Ajoutez maintenant votre ventilateur. Homey peut lui envoyer les mêmes codes que la télécommande — mais le ventilateur ne renvoie rien, donc Homey affiche ce qu'il a commandé ou entendu en dernier.",
     "not_learned": "Homey n'a pas encore appris votre télécommande. Revenez en arrière et appuyez sur une touche.",
     "found_hint_light": "Ensuite, Homey a besoin d'une chose qu'il ne peut pas déduire : si la lampe est allumée en ce moment.",
-    "timeout_restored": "Homey a entendu une télécommande Lucci mais jamais un signal complet, donc l'adresse n'était pas sûre. Rapprochez la télécommande de Homey et réessayez.",
+    "timeout_restored": "Homey a entendu une télécommande Lucci Air mais jamais un signal complet, donc l'adresse n'était pas sûre. Rapprochez la télécommande de Homey et réessayez.",
     "title_light": "Ajouter une lampe"
   },
   "calibrate": {

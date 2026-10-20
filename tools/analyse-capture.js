@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Reads a capture file off the Lucci handset and reports what it says about the
+// Reads a capture file off the Lucci Air handset and reports what it says about the
 // protocol: frame structure, symbol alphabet, which positions hold still and
 // which move between buttons, and a candidate Homey signal definition.
 //
