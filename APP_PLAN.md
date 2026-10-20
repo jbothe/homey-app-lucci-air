@@ -288,6 +288,26 @@ against itself.
 
 Steps 1 and 2 can proceed now. Step 3 is where the protocol stops being a hypothesis.
 
+## Two fans in one house
+
+There are no channels in this protocol — the address is the whole identity — so two fans are two
+addresses, two handsets and two of each device. Nothing in the app is per-household: each device
+stores its own address and bit 24, every frame reaches every device and each ignores what is not
+addressed to it, and the device id is built from the address so two fans cannot collapse into one.
+Pairing reports which case it is in: the first of a kind, a handset already paired, a different
+handset, or — the one that would be a finding — the same address with a different bit 24, which
+would mean two units sharing an address and the id failing to tell them apart.
+
+A new device of a kind that already exists is numbered, because two fans would otherwise both arrive
+called "Ceiling fan" and picking the right one would be guesswork.
+
+**One thing to watch, which cannot be settled from here.** The press spacing is per device, so two
+fans driven at once can have their bursts interleaved on air by Homey's own radio queue. Each
+receiver should ignore the other's frames — a foreign code is not its button being held — so each
+should still see one press per press. Making the spacing global instead would mean one fan's
+twenty-second calibrate blocking the other, which is worse than the problem. If a fan ever misses a
+command while the other is being driven hard, this is the first thing to suspect.
+
 ## Known state drift
 
 Worth stating in the app's own documentation rather than discovering in a support thread:

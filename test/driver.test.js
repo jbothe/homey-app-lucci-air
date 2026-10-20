@@ -16,7 +16,9 @@ const { ADDRESS_LENGTH, buildFrame, identifyFrame } = require('../lib/lucci-prot
 function homeyStub() {
     const state = { rxEnabled: 0, payloadHandler: null, signalsMade: 0 };
     const homey = {
-        __: key => key,
+        // Homey's __ takes either a locale key or an object of translations, and
+        // the driver manifest's name is the latter.
+        __: key => (typeof key === 'string' ? key : key.en),
         rf: {
             getSignal433: () => {
                 state.signalsMade += 1;
@@ -432,4 +434,133 @@ test('the fan is not asked, because nothing about it needs telling', async () =>
     await fan.onPair(view);
 
     assert.deepEqual(Object.keys(handlers).sort(), ['learn', 'list_devices']);
+});
+
+// --- two fans, two handsets --------------------------------------------------
+
+// A second handset. There are no channels in this protocol: the 16-bit address
+// is the whole of a unit's identity, so a second fan is a second address.
+const SECOND = '1001011000110101'.split('').map(Number);
+
+test('two handsets pair as two devices, keyed apart by address', async () => {
+    const fan = await driver();
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await fan.onPair(view);
+
+    const learn = async (address, bit24) => {
+        const learning = handlers.learn();
+        await settle();
+        air(fan, buildFrame(address, 'fan.off', bit24));
+        await learning;
+        return handlers.list_devices();
+    };
+
+    const [first] = await learn(ADDRESS, 0);
+    const [second] = await learn(SECOND, 1);
+
+    assert.notEqual(first.data.id, second.data.id, 'two fans collapsed into one device');
+    assert.deepEqual(first.store, { address: ADDRESS, bit24: 0 });
+    assert.deepEqual(second.store, { address: SECOND, bit24: 1 });
+});
+
+test('pairing says whether this handset is a new one or one already added', async () => {
+    const fan = await driver();
+    // Two already paired: one of them is the handset about to be presented.
+    fan.getDevices = () => [
+        {
+            getName: () => 'Bedroom fan',
+            getStoreValue: key => ({ address: ADDRESS, bit24: 0 })[key],
+        },
+    ];
+
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await fan.onPair(view);
+
+    const learning = handlers.learn();
+    await settle();
+    air(fan, buildFrame(ADDRESS, 'fan.off', 0));
+    await learning;
+    await handlers.list_devices();
+
+    assert.ok(fan.logs.some(line => line.includes('this is Bedroom fan, already paired')),
+        fan.logs.join(' | '));
+});
+
+test('a second handset is reported as a separate device, not a collision', async () => {
+    const fan = await driver();
+    fan.getDevices = () => [
+        {
+            getName: () => 'Bedroom fan',
+            getStoreValue: key => ({ address: ADDRESS, bit24: 0 })[key],
+        },
+    ];
+
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await fan.onPair(view);
+
+    const learning = handlers.learn();
+    await settle();
+    air(fan, buildFrame(SECOND, 'fan.off', 1));
+    await learning;
+    await handlers.list_devices();
+
+    assert.ok(fan.logs.some(line => line.includes('a different handset')), fan.logs.join(' | '));
+});
+
+test('two units sharing an address is reported as the finding it would be', async () => {
+    // Not seen, and it would be a fact about the protocol rather than a bug:
+    // the device id is built from the address alone, so two units telling
+    // themselves apart by bit 24 would arrive as one device.
+    const fan = await driver();
+    fan.getDevices = () => [
+        {
+            getName: () => 'Bedroom fan',
+            getStoreValue: key => ({ address: ADDRESS, bit24: 0 })[key],
+        },
+    ];
+
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await fan.onPair(view);
+
+    const learning = handlers.learn();
+    await settle();
+    air(fan, buildFrame(ADDRESS, 'fan.off', 1));
+    await learning;
+    await handlers.list_devices();
+
+    assert.ok(fan.logs.some(line => line.includes('two units are sharing an address')),
+        fan.logs.join(' | '));
+});
+
+test('a second device of a kind is numbered, so the list can be told apart', async () => {
+    // Two fans would otherwise both arrive called "Ceiling fan" and picking the
+    // right one would be guesswork. The user renames it anyway; this only has
+    // to be distinguishable at the moment of adding.
+    const fan = await driver();
+    const handlers = {};
+    const view = session();
+    view.setHandler = (event, handler) => { handlers[event] = handler; };
+    await fan.onPair(view);
+
+    const offer = async address => {
+        const learning = handlers.learn();
+        await settle();
+        air(fan, buildFrame(address, 'fan.off', 0));
+        await learning;
+        const [device] = await handlers.list_devices();
+        return device.name;
+    };
+
+    assert.equal(await offer(ADDRESS), 'Ceiling fan');
+
+    fan.getDevices = () => [{ getName: () => 'Ceiling fan', getStoreValue: () => null }];
+    assert.equal(await offer(SECOND), 'Ceiling fan 2');
 });

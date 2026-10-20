@@ -515,3 +515,51 @@ test('the fan tracks what it believes, not what the capability has caught up to'
     assert.equal(fan.step, '0');
     assert.equal(fan.on, true);
 });
+
+// --- two fans in one house ---------------------------------------------------
+
+const SECOND = '1001011000110101'.split('').map(Number);
+
+test('two fans transmit their own address and nothing else', async () => {
+    const mine = await device({ speed: '2', onoff: false, bit24: 0 });
+    const theirs = new LucciFanDevice();
+    theirs.storeValues.address = SECOND;
+    theirs.storeValues.bit24 = 1;
+    theirs.capabilityValues.lucci_speed = '2';
+    await theirs.onInit();
+
+    await request(mine, { lucci_speed: '4' });
+    await request(theirs, { lucci_speed: '4' });
+
+    assert.deepEqual(identifyFrame(mine.sent[0]).address, ADDRESS);
+    assert.deepEqual(identifyFrame(theirs.sent[0]).address, SECOND);
+    // Same command, different handset: the frames differ in the address and in
+    // bit 24, and in nothing else.
+    assert.deepEqual(mine.sent[0].slice(16, 24), theirs.sent[0].slice(16, 24));
+    assert.notDeepEqual(mine.sent[0], theirs.sent[0]);
+});
+
+test('one fan ignores the other household\'s handset entirely', async () => {
+    // What keeps two fans apart on receive. Both devices hear every frame — the
+    // app identifies once and hands it to everyone — so this filter is the only
+    // thing that stops one handset driving both.
+    const mine = await device({ speed: '2', onoff: false, bit24: 0 });
+
+    await receive(mine, buildFrame(SECOND, 'fan.speed.5', 1));
+    assert.equal(mine.capabilityValues.lucci_speed, '2', 'another handset moved this fan');
+    assert.equal(mine.on, false);
+
+    await receive(mine, buildFrame(ADDRESS, 'fan.speed.5', 0));
+    assert.equal(mine.capabilityValues.lucci_speed, '5', 'its own handset was ignored');
+});
+
+test('a frame with the right address but a different bit 24 is still acted on', async () => {
+    // Bit 24 is not part of the identity check, because what it means is not
+    // known. A mismatch is reported once and the frame is believed: refusing it
+    // would mean inventing a rule for a bit nobody has explained.
+    const mine = await device({ speed: '2', onoff: false, bit24: 0 });
+    await receive(mine, buildFrame(ADDRESS, 'fan.speed.3', 1));
+
+    assert.equal(mine.capabilityValues.lucci_speed, '3');
+    assert.ok(mine.logs.some(line => line.includes('arrived with bit 24 1')), mine.logs.join(' | '));
+});

@@ -334,6 +334,12 @@ echo there would have counted every press twice.
 Positions 0-15 never change, across every button and every recording, which makes them the
 per-handset address. The handset has no DIP switches or channel selector; the fan learns it.
 
+**There are no channels.** The sibling Bear handset has a 4-bit channel field and five blinds on one
+remote; this protocol has nothing of the kind. The 16-bit address is the whole of a unit's identity,
+so a second fan is a second address and a second handset, with its own bit 24 — not a channel on the
+same one. A household with two fans has two of everything, and the only thing keeping them apart is
+that the addresses differ.
+
 The app should therefore **learn the address from the user's own handset at pair time** rather than
 shipping one. Listen on 433 MHz, wait for a 25-bit frame whose selector is `10` or `01` and whose
 command tail is one of the sixteen known, and keep the leading 16 bits. Matching on that structure
@@ -369,9 +375,14 @@ preamble mismatches confined to the first four positions — that is, to the art
 
 ## Caveats
 
-- **One handset.** The recordings cannot distinguish a field that identifies *this* handset from one
-  identical on every Lucci remote, and cannot show whether part of the address is a fixed
-  manufacturer prefix. Settling it needs a second, independently paired handset.
+- **Whether two handsets can share an address is unsettled.** The 33 recordings came from one
+  handset, so they cannot distinguish a field identifying *this* unit from one identical on every
+  Lucci remote, nor show whether part of the address is a fixed manufacturer prefix. If two did
+  share an address, the app would make them one device — the id is built from the address alone —
+  and pairing says so explicitly rather than letting it look like "no new devices found". A second,
+  independently paired handset settles it; evidence so far is only that frames from a second
+  transmitter in this household failed the address check, which is consistent with differing but
+  does not show where.
 - **Bit 24** is unresolved, as above.
 - **The encoding of bits 18-23 is not derived.** Sixteen codes are known and tabulated; the rule
   that generates them is not. A seventeenth command cannot be synthesised, only captured.
