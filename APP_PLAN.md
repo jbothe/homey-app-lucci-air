@@ -291,7 +291,9 @@ Steps 1 and 2 can proceed now. Step 3 is where the protocol stops being a hypoth
 ## Two fans in one house
 
 There are no channels in this protocol — the address is the whole identity — so two fans are two
-addresses, two handsets and two of each device. Nothing in the app is per-household: each device
+addresses, two handsets and two of each device. **Confirmed on the hardware**: two fans and two
+lights paired as four devices and each is controlled independently, with the two handsets differing
+in both address and bit 24. Nothing in the app is per-household: each device
 stores its own address and bit 24, every frame reaches every device and each ignores what is not
 addressed to it, and the device id is built from the address so two fans cannot collapse into one.
 Pairing reports which case it is in: the first of a kind, a handset already paired, a different

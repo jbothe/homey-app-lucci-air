@@ -1,6 +1,6 @@
-# Lucci
+# Lucci Air
 
-Homey app for Beacon Lighting **Lucci** ceiling fans driven by their 433 MHz handset — fan on/off,
+Homey app for Beacon Lighting **Lucci Air** ceiling fans driven by their 433 MHz handset — fan on/off,
 speed up and down, direction, and the light's on/off and brightness.
 
 Built the same way as its siblings, by recording the handset and cloning what it sends, so the fan
@@ -69,11 +69,12 @@ checked against the sibling Bear handset's recordings, where the answer is alrea
 recovers that protocol's preamble, alphabet, frame length, repeat count, interval and tolerance
 without being given any of them.
 
-One bit of the frame follows no rule at all. Bit 24 was consistent with even parity across all 33
-recordings, and the radio later disproved it, so the app learns that bit from your own handset at
-pair time rather than deriving it — and refuses to transmit without it, since a guess there looks
-like a working device driving nothing. What the bit *means* is still unknown; see "Bit 24" in
-[`RF_PROTOCOL.md`](RF_PROTOCOL.md).
+One bit of the frame turned out to belong to the handset. Bit 24 was consistent with even parity
+across all 33 recordings from one remote, and a second remote disproved that — it sends `1` where
+parity demands `0`. So the app learns that bit at pair time rather than deriving it, and refuses to
+transmit without it, since a guess there looks like a working device driving nothing. Two fans with
+two remotes are driven correctly on their own learned bits; what the bit *encodes* is still unknown.
+See "Bit 24" in [`RF_PROTOCOL.md`](RF_PROTOCOL.md).
 
 In short, what the handset turned out to be: a 19-duration preamble, 25 bits, a 16-bit address and a
 fan/light selector. Fan speed, direction and the timer are **absolute** — the handset tracks the

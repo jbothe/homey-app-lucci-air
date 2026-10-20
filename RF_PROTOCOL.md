@@ -1,6 +1,6 @@
-# Lucci fan handset 433 MHz RF protocol
+# Lucci Air fan handset 433 MHz RF protocol
 
-Reverse-engineered from 33 recordings off a single Lucci ceiling-fan handset, taken with Homey's
+Reverse-engineered from 33 recordings off a single Lucci Air ceiling-fan handset, taken with Homey's
 built-in RF signal recorder. Every button is covered, and every code below was seen in at least two
 independent recordings.
 
@@ -19,9 +19,9 @@ Every frame is a 19-duration preamble followed by 25 bits:
 
 ```
 [ 0..15  ]  address    identifies the handset, same for every button
-[ 16..17 ]  selector   10 for the fan, 01 for the light. Never 00 or 11
+[ 16..17 ]  selector   10 for the fan, 01 for the light. On 11, see the caveats
 [ 18..23 ]  command    which button, and for most of them which value
-[ 24     ]  always 0   see "Bit 24" below
+[ 24     ]  handset    0 on one handset, 1 on another — see "Bit 24" below
 ```
 
 The app stores one address per paired device and prepends it to a command's 9-bit tail.
@@ -198,18 +198,29 @@ An odd-weight address does not explain it either, which is worth stating because
 predicted escape: an odd-weight address under even parity gives bit 24 `1` *and* agreement, so such
 a frame logs nothing at all.
 
-### What it probably is
+### It belongs to the handset
 
-These frames came from a transmitter whose address is not the paired one — the fan device never
-mirrored them, so `sameAddress` rejected every one. This household has more than one Lucci fan. The
-likeliest reading is therefore that **bit 24 identifies the handset or the fitting**, a 25th bit of
-addressing rather than a check over the 24 before it, and that this household's two handsets differ
-in it. That would also settle, in the affirmative, the caveat below about a field that identifies
-*this* handset: there is now evidence of a per-unit bit, just not of what else it might encode.
+**The second handset settled it.** Pairing it gave:
 
-It is a reading and not a finding. Settling it needs the second handset's own recordings, which
-would show whether its bit 24 is constant across all sixteen of its commands — that is the test, and
-it is the same test the first handset was put to.
+| | address | weight of bits 0-23 | bit 24 |
+|---|---|---|---|
+| handset 1 | `0101110011110011` | even | `0` |
+| handset 2 | `1010010010000000` | even | `1` |
+
+Both handsets' frames hold an **even** number of ones across bits 0-23, and the two send
+**different values** in bit 24. No rule computed from bits 0-23 can give 0 for one and 1 for the
+other, so this is a direct falsification from a paired handset rather than an inference from a
+transmitter nobody could identify. It also explains the thousands of "parity 1 where 0 was expected"
+frames in the earlier log: that was handset 2, heard before it was paired.
+
+Handset 2 sent bit 24 `1` on **both** a fan command (`fan.off`, selector `10`) and a light command
+(`light.onoff`, selector `01`). Constant across two commands in two different selectors is what an
+identity bit does, and not what a per-command field does. All sixteen commands would settle it
+properly; two was enough to act on.
+
+So **bit 24 belongs to the handset**, a 25th bit of addressing rather than a check over the 24
+before it. **Both fans are driven correctly with their own learned bit**, which is the practical
+proof of it.
 
 **The app no longer depends on the answer.** It learns the bit rather than deriving it, so it is
 right about bit 24 whether the bit identifies a handset, a fitting, a production batch or something
@@ -375,15 +386,26 @@ preamble mismatches confined to the first four positions — that is, to the art
 
 ## Caveats
 
-- **Whether two handsets can share an address is unsettled.** The 33 recordings came from one
-  handset, so they cannot distinguish a field identifying *this* unit from one identical on every
-  Lucci remote, nor show whether part of the address is a fixed manufacturer prefix. If two did
-  share an address, the app would make them one device — the id is built from the address alone —
-  and pairing says so explicitly rather than letting it look like "no new devices found". A second,
-  independently paired handset settles it; evidence so far is only that frames from a second
-  transmitter in this household failed the address check, which is consistent with differing but
-  does not show where.
-- **Bit 24** is unresolved, as above.
+- **Two handsets do not share an address.** Settled by pairing a second one: `0101110011110011` and
+  `1010010010000000` differ from the first bit on, so there is no fixed leading manufacturer prefix
+  either. A fixed field elsewhere in the 16 bits is not ruled out by two samples. Had they collided
+  the app would have made them one device, the id being built from the address alone, and pairing
+  says so explicitly rather than letting it look like "no new devices found".
+- **One frame has been seen with a selector of `11`.** From handset 2's address, carrying its bit 24
+  of `1`:
+
+  ```
+  1010010010000000 11 000000 1
+  ```
+
+  The frame layout says the selector is `10` or `01`, which was true of all 33 recordings — and
+  those came from handset 1. This is a single occurrence out of a whole day of listening, it differs
+  from that handset's `fan.off` in four bits so it is not a one-bit error, and nothing like it has
+  appeared since. It is either a seventeenth command with a third selector value, a different frame
+  type, or a badly garbled frame. **Unexplained**, and recorded rather than tidied away. The app logs
+  it and discards it, which is right either way.
+- **Bit 24 identifies the handset**, as above — what it encodes beyond that is unknown, and the app
+  no longer depends on knowing.
 - **The encoding of bits 18-23 is not derived.** Sixteen codes are known and tabulated; the rule
   that generates them is not. A seventeenth command cannot be synthesised, only captured.
 - **"Up at maximum" rests on one clean frame.** It repeats step 5, so the ladder appears to top out
