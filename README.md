@@ -83,6 +83,23 @@ light's brightness is **relative**, so it can only be stepped.
 
 Recordings are **not committed** — they carry the code that operates the fan.
 
+## A second remote: the CR2032 handset
+
+The Lucci **Whitehaven** fan (SKU 213042, Rhine RH787NRN receiver) ships with a coin-cell remote that
+speaks a **different protocol**, so it has drivers of its own — a fan and a light, each paired off
+your own remote — and shares nothing with the USB-C remote's except the app and the press queue.
+It has six speed buttons, power off, one reverse and one light toggle; no timer, no brightness.
+
+**Confirmed on a fan:** power off, all six speeds, starting the fan from off, and Reverse (one flip per
+press at 9 repetitions; not at 1, 2 or 5 for OFF). Pairing and receiving the remote work on a Homey.
+**Not confirmed:** the light (the fan this was built against has none fitted). The manual says the fan
+must be started on speed VI after power-on; with the fan on VI, a power cut at the wall resumed it there
+and another speed was honoured at once, so that rule did not get in the way. Reverse is a **Change direction** button, not a
+state, because the remote only sends "flip"; the light keeps a believed on/off.
+[`RF_PROTOCOL_CR2032.md`](RF_PROTOCOL_CR2032.md) says exactly what is and is not verified;
+[`CAPTURE_GUIDE_CR2032.md`](CAPTURE_GUIDE_CR2032.md) is how it was recorded, and
+`npm run analyse:cr2032` reads a recording of it.
+
 ## Licence
 
 GPL-3.0

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" width="960" height="960">
+    <!-- The fan's lamp: a bulb, glass pinching into a screw base. -->
+    <g fill="#1E1E1E">
+        <path d="M328,549
+                 C376,583 357,639 357,677
+                 L603,677
+                 C603,639 584,583 632,549
+                 A265,265 0 1 0 328,549 Z"/>
+        <path d="M357,668
+                 L603,668
+                 L603,744
+                 Q603,774 573,774
+                 L387,774
+                 Q357,774 357,744 Z"/>
+        <rect x="391" y="796" width="178" height="93" rx="36"/>
+    </g>
+</svg>

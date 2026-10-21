@@ -1,0 +1,51 @@
+{
+  "id": "light-cr2032",
+  "name": {
+    "en": "Fan light (coin-cell remote)",
+    "nl": "Ventilatorlamp (knoopcelafstandsbediening)",
+    "de": "Ventilatorlampe (Knopfzellen-Fernbedienung)",
+    "fr": "Lampe de ventilateur (télécommande à pile bouton)"
+  },
+  "images": {
+    "small": "/drivers/light-cr2032/assets/images/small.png",
+    "large": "/drivers/light-cr2032/assets/images/large.png",
+    "xlarge": "/drivers/light-cr2032/assets/images/xlarge.png"
+  },
+  "class": "light",
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "rf433"
+  ],
+  "rf433": {
+    "satelliteMode": true
+  },
+  "capabilities": [
+    "onoff",
+    "lucci_toggle",
+    "lucci_resync"
+  ],
+  "pair": [
+    {
+      "id": "learn",
+      "navigation": {
+        "next": "state"
+      }
+    },
+    {
+      "id": "state"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

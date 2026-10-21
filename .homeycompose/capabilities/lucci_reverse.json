@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Change direction",
+    "nl": "Draairichting wijzigen",
+    "de": "Drehrichtung ändern",
+    "fr": "Changer le sens"
+  },
+  "getable": false,
+  "setable": true,
+  "uiComponent": "button",
+  "uiQuickAction": false
+}

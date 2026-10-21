@@ -1,0 +1,81 @@
+<style>
+    .lucci-state {
+        min-height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: var(--homey-su-4) var(--homey-su-3);
+    }
+
+    .lucci-message {
+        font-size: var(--homey-font-size-default);
+        font-weight: var(--homey-font-weight-medium);
+        color: var(--homey-color-text);
+        margin: 0 0 var(--homey-su-1);
+    }
+
+    .lucci-hint {
+        font-size: var(--homey-font-size-small);
+        color: var(--homey-color-text-light);
+        margin: 0 0 var(--homey-su-3);
+        max-width: 340px;
+    }
+
+    .lucci-answers {
+        display: flex;
+        flex-direction: column;
+        gap: var(--homey-su-2);
+        width: 100%;
+        max-width: 260px;
+    }
+</style>
+
+<div class="lucci-state">
+    <p class="lucci-message" id="message"></p>
+    <p class="lucci-hint" id="hint"></p>
+
+    <div class="lucci-answers">
+        <button class="homey-button-primary-full" id="on"></button>
+        <button class="homey-button-secondary-full" id="off"></button>
+    </div>
+</div>
+
+<script type="application/javascript">
+    var message = document.getElementById('message');
+    var hint = document.getElementById('hint');
+    var on = document.getElementById('on');
+    var off = document.getElementById('off');
+
+    Homey.setTitle(Homey.__('state.title'));
+    message.textContent = Homey.__('state.question');
+    hint.textContent = Homey.__('state.hint');
+    on.textContent = Homey.__('state.on');
+    off.textContent = Homey.__('state.off');
+
+    function answer(lit) {
+        on.disabled = true;
+        off.disabled = true;
+        on.classList.add('is-disabled');
+        off.classList.add('is-disabled');
+
+        // This step declares no navigation, so one of these two answers is the
+        // only way forward — the question cannot be skipped and left to a guess,
+        // which is the whole reason it is being asked.
+        Homey.emit('state', { lit: lit })
+            .then(function () { Homey.showView('list_devices'); })
+            .catch(function (err) {
+                message.textContent = Homey.__('state.failed');
+                hint.textContent = (err && err.message) || '';
+                on.disabled = false;
+                off.disabled = false;
+                on.classList.remove('is-disabled');
+                off.classList.remove('is-disabled');
+            });
+    }
+
+    on.addEventListener('click', function () { answer(true); });
+    off.addEventListener('click', function () { answer(false); });
+</script>
