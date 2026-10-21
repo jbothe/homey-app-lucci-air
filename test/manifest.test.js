@@ -17,7 +17,7 @@ const composeApp = read('.homeycompose/app.json');
 const signal = read('.homeycompose/signals/433/lucci.json');
 const signalCr2032 = read('.homeycompose/signals/433/lucci_cr2032.json');
 const driver = read('drivers/fan/driver.compose.json');
-const drivers = ['fan', 'light', 'fan-cr2032', 'light-cr2032']
+const drivers = ['fan', 'light', 'fan-light', 'fan-cr2032', 'light-cr2032', 'fan-light-cr2032']
     .map(id => read(`drivers/${id}/driver.compose.json`));
 const capability = id => read(`.homeycompose/capabilities/${id}.json`);
 
@@ -43,7 +43,7 @@ test('app.json is in step with .homeycompose', async (t) => {
             assert.deepEqual(built.capabilities, compose.capabilities);
             assert.equal(built.class, compose.class);
         }
-        assert.equal(app.drivers.length, 4);
+        assert.equal(app.drivers.length, 6);
     });
 
     await t.test('capabilities', () => {
@@ -247,6 +247,8 @@ test('every string the app asks for is in every locale', () => {
         'lib/lucci-driver.js', 'lib/cr2032-driver.js',
         'drivers/fan-cr2032/driver.js', 'drivers/fan-cr2032/device.js',
         'drivers/light-cr2032/driver.js', 'drivers/light-cr2032/device.js',
+        'drivers/fan-light/driver.js', 'drivers/fan-light/device.js',
+        'drivers/fan-light-cr2032/driver.js', 'drivers/fan-light-cr2032/device.js',
         'drivers/fan/driver.js', 'drivers/fan/device.js', 'drivers/fan/pair/learn.html',
         'drivers/light/driver.js', 'drivers/light/device.js', 'drivers/light/pair/learn.html',
         'drivers/light/pair/state.html', 'drivers/light/repair/calibrate.html',
@@ -330,6 +332,60 @@ test('the CR2032 light is on/off and nothing else', () => {
     assert.equal('repair' in compose, false, 'nothing to calibrate');
 });
 
+test('the combined devices are the handset: the fan\'s controls plus the light\'s buttons', () => {
+    const fan = drivers.find(d => d.id === 'fan');
+    const fanCr2032 = drivers.find(d => d.id === 'fan-cr2032');
+    const both = drivers.find(d => d.id === 'fan-light');
+    const bothCr2032 = drivers.find(d => d.id === 'fan-light-cr2032');
+
+    // The fan, unchanged, then only the buttons the handset has: a toggle and a
+    // brighter and dimmer on the USB-C remote, a toggle alone on the CR2032 one.
+    // No light `onoff` or `dim` - those are a belief about something that reports
+    // nothing, and the standalone light is where they live - and no resync, which
+    // only corrects a belief.
+    assert.deepEqual(both.capabilities,
+        [...fan.capabilities, 'lucci_toggle', 'lucci_brighter', 'lucci_dimmer']);
+    assert.deepEqual(bothCr2032.capabilities, [...fanCr2032.capabilities, 'lucci_toggle']);
+
+    for (const compose of [both, bothCr2032]) {
+        assert.equal(compose.class, 'fan', 'the tile is a fan; `onoff` is the fan\'s');
+        assert.equal(compose.rf433.satelliteMode, true);
+        assert.equal(compose.capabilities.filter(c => c === 'onoff').length, 1);
+        assert.ok(!compose.capabilities.includes('dim'), `${compose.id} has a slider`);
+        assert.ok(!compose.capabilities.includes('lucci_resync'), `${compose.id} has a resync button`);
+        assert.equal('repair' in compose, false, 'nothing to calibrate');
+
+        // `onoff` here is the fan, so the light's buttons are titled as the
+        // light's. Without it "Toggle" sits beside a fan's power switch.
+        for (const id of compose.capabilities.filter(c => ['lucci_toggle', 'lucci_brighter', 'lucci_dimmer'].includes(c))) {
+            for (const lang of ['en', 'nl', 'de', 'fr']) {
+                assert.ok(compose.capabilitiesOptions[id].title[lang], `${compose.id}.${id} has no ${lang} title`);
+            }
+        }
+
+        // No state question at pair time: nothing is believed about the light.
+        assert.deepEqual(compose.pair.map(v => v.id), ['learn', 'list_devices', 'add_my_devices']);
+    }
+});
+
+test('the legacy remote\'s devices say so, and no longer say what battery it takes', () => {
+    for (const id of ['fan-cr2032', 'light-cr2032', 'fan-light-cr2032']) {
+        const compose = drivers.find(d => d.id === id);
+        for (const [lang, name] of Object.entries(compose.name)) {
+            assert.match(name, /\(legacy\)$/, `${id} (${lang}): ${name}`);
+            assert.doesNotMatch(name, /coin|knop|pile bouton|cell/i, `${id} (${lang}): ${name}`);
+        }
+    }
+
+    // And the USB-C remote's are the plain names, the way they always were.
+    for (const id of ['fan', 'light', 'fan-light']) {
+        const compose = drivers.find(d => d.id === id);
+        assert.doesNotMatch(compose.name.en, /legacy/, id);
+    }
+    assert.equal(drivers.find(d => d.id === 'fan-light').name.en, 'Ceiling fan + light');
+    assert.equal(drivers.find(d => d.id === 'fan-light-cr2032').name.en, 'Ceiling fan + light (legacy)');
+});
+
 test('every driver is a distinct id, with an image of its own', () => {
     const ids = drivers.map(d => d.id);
     assert.equal(new Set(ids).size, ids.length);
@@ -339,5 +395,26 @@ test('every driver is a distinct id, with an image of its own', () => {
             assert.ok(image.startsWith(`/drivers/${compose.id}/`), `${compose.id}: ${image}`);
             assert.ok(fs.existsSync(path.join(root, image)), `${compose.id}: ${image} is missing`);
         }
+    }
+});
+
+test('every driver icon is a plain, square, transparent drawing', () => {
+    // Homey's guidelines ask for a 960x960 vector on a transparent background,
+    // with no images, gradients or fills behind it. The first fan + light icon
+    // drew its bulb through <defs>, <mask> and <use>, and showed as a bare fan:
+    // that machinery is not something an icon should depend on, so drawings are
+    // plain shapes.
+    for (const compose of drivers) {
+        const file = `drivers/${compose.id}/assets/icon.svg`;
+        const svg = fs.readFileSync(path.join(root, file), 'utf8');
+
+        assert.match(svg, /viewBox="0 0 960 960"/, `${file} is not a 960x960 canvas`);
+        assert.match(svg, /width="960"/, file);
+        assert.match(svg, /height="960"/, file);
+        for (const banned of ['<defs', '<mask', '<use', '<image', 'Gradient', '<filter', '<clipPath', '<style']) {
+            assert.ok(!svg.includes(banned), `${file} uses ${banned}`);
+        }
+        // A rectangle as big as the canvas is a background, not a drawing.
+        assert.doesNotMatch(svg, /<rect[^>]*width="960"[^>]*height="960"/, `${file} paints a background`);
     }
 });

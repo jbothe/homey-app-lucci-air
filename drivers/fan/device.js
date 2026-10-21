@@ -160,6 +160,8 @@ class LucciAirFanDevice extends Homey.Device {
             }
         });
 
+        this.registerLightControls();
+
         // Follow the handset, so Homey does not show stale state. Because speed,
         // direction and the timer are absolute, a received frame gives the exact
         // state rather than a hint — which is the whole reason this is worth the
@@ -171,6 +173,10 @@ class LucciAirFanDevice extends Homey.Device {
             this.error('could not listen for the handset; state may go stale:', err.message);
         }
     }
+
+    // Where a fan that also carries the handset's light buttons registers them.
+    // A fan alone has none.
+    registerLightControls() {}
 
     async onUninit() {
         await this.driver.unregisterRXListener(this.onRX)
@@ -304,15 +310,7 @@ class LucciAirFanDevice extends Homey.Device {
         this.noteBit24(frame);
 
         if (frame.domain !== 'fan') {
-            // The light's codes carry the same address, so this device hears
-            // them whether it wants to or not. Said once, because it is worth
-            // knowing the light is audible — that is step 6's whole premise —
-            // and a held dimmer button is 56 frames, which is not worth a line
-            // each.
-            if (this.heardLight !== true) {
-                this.heardLight = true;
-                this.log(`heard ${frame.key} from the handset; the light is a separate device, still to come`);
-            }
+            this.heardLightButton(frame);
             return;
         }
 
@@ -322,6 +320,17 @@ class LucciAirFanDevice extends Homey.Device {
         this.lastRxAt = now;
 
         this.mirror(frame).catch(err => this.error(`mirroring ${frame.key} failed:`, err.message));
+    }
+
+    // The light's codes carry the same address, so this device hears them
+    // whether it wants to or not. Said once, because it is worth knowing the
+    // light is audible — that is what the light device's whole premise rests
+    // on — and a held dimmer button is 56 frames, which is not worth a line
+    // each.
+    heardLightButton(frame) {
+        if (this.heardLight === true) return;
+        this.heardLight = true;
+        this.log(`heard ${frame.key} from the handset; the light is a separate device`);
     }
 
     // Brings the capabilities into line with a press that already happened.

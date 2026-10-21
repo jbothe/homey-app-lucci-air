@@ -99,6 +99,8 @@ class Cr2032FanDevice extends Homey.Device {
             await this.reverse('lucci_reverse');
         });
 
+        this.registerLightControls();
+
         // Follow the remote, so Homey does not show stale state. Failing here
         // must not stop the device from transmitting.
         this.onRX = this.onRX.bind(this);
@@ -108,6 +110,10 @@ class Cr2032FanDevice extends Homey.Device {
             this.error('could not listen for the remote; state may go stale:', err.message);
         }
     }
+
+    // Where a fan that also carries the remote's light button registers it. A
+    // fan alone has none.
+    registerLightControls() {}
 
     async onUninit() {
         await this.driver.unregisterRXListener(this.onRX)
@@ -223,12 +229,7 @@ class Cr2032FanDevice extends Homey.Device {
         this.noteTail(frame);
 
         if (frame.domain !== 'fan') {
-            // The light's code carries the same address, so this device hears it
-            // whether it wants to or not.
-            if (this.heardLight !== true) {
-                this.heardLight = true;
-                this.log(`heard ${frame.key} from the remote; the light is a separate device`);
-            }
+            this.heardLightButton(frame);
             return;
         }
 
@@ -238,6 +239,14 @@ class Cr2032FanDevice extends Homey.Device {
         this.lastRxAt = now;
 
         this.mirror(frame).catch(err => this.error(`mirroring ${frame.key} failed:`, err.message));
+    }
+
+    // The light's code carries the same address, so this device hears it
+    // whether it wants to or not.
+    heardLightButton(frame) {
+        if (this.heardLight === true) return;
+        this.heardLight = true;
+        this.log(`heard ${frame.key} from the remote; the light is a separate device`);
     }
 
     // Brings the capabilities into line with a press that already happened.

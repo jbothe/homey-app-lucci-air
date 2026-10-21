@@ -1,0 +1,87 @@
+{
+  "id": "fan-light",
+  "name": {
+    "en": "Ceiling fan + light",
+    "nl": "Plafondventilator + lamp",
+    "de": "Deckenventilator + Lampe",
+    "fr": "Ventilateur de plafond + lampe"
+  },
+  "images": {
+    "small": "/drivers/fan-light/assets/images/small.png",
+    "large": "/drivers/fan-light/assets/images/large.png",
+    "xlarge": "/drivers/fan-light/assets/images/xlarge.png"
+  },
+  "class": "fan",
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "rf433"
+  ],
+  "rf433": {
+    "satelliteMode": true
+  },
+  "capabilities": [
+    "onoff",
+    "lucci_speed",
+    "lucci_direction",
+    "lucci_timer",
+    "lucci_toggle",
+    "lucci_brighter",
+    "lucci_dimmer"
+  ],
+  "capabilitiesOptions": {
+    "lucci_speed": {
+      "preventInsights": true
+    },
+    "lucci_direction": {
+      "preventInsights": true
+    },
+    "lucci_timer": {
+      "preventInsights": true
+    },
+    "lucci_toggle": {
+      "title": {
+        "en": "Toggle light",
+        "nl": "Lamp omschakelen",
+        "de": "Licht umschalten",
+        "fr": "Basculer la lumière"
+      }
+    },
+    "lucci_brighter": {
+      "title": {
+        "en": "Light brighter",
+        "nl": "Lamp helderder",
+        "de": "Licht heller",
+        "fr": "Lumière plus claire"
+      }
+    },
+    "lucci_dimmer": {
+      "title": {
+        "en": "Light dimmer",
+        "nl": "Lamp zachter",
+        "de": "Licht dunkler",
+        "fr": "Lumière plus sombre"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "learn",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

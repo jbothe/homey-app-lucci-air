@@ -1,10 +1,10 @@
 {
   "id": "light-cr2032",
   "name": {
-    "en": "Fan light (coin-cell remote)",
-    "nl": "Ventilatorlamp (knoopcelafstandsbediening)",
-    "de": "Ventilatorlampe (Knopfzellen-Fernbedienung)",
-    "fr": "Lampe de ventilateur (télécommande à pile bouton)"
+    "en": "Fan light (legacy)",
+    "nl": "Ventilatorlamp (legacy)",
+    "de": "Ventilatorlampe (legacy)",
+    "fr": "Lampe de ventilateur (legacy)"
   },
   "images": {
     "small": "/drivers/light-cr2032/assets/images/small.png",

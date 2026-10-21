@@ -9,6 +9,22 @@ needs no hub, no bridge and no account:
 - [Heat & Glo IntelliFire RC300](https://github.com/jbothe/homey-heatnglo-rc300)
 - [Bear blinds](https://github.com/jbothe/homey-bear-blind-automation)
 
+## Devices
+
+Each remote gets three devices, so a fan can be added the way it is fitted. Every one is paired off your
+own remote.
+
+| | USB-C remote | Legacy remote (CR2032) |
+|---|---|---|
+| fan only | **Ceiling fan** | **Ceiling fan (legacy)** |
+| light only | **Fan light** | **Fan light (legacy)** |
+| fan and light on one tile | **Ceiling fan + light** | **Ceiling fan + light (legacy)** |
+
+The combined device is the remote as it is, not a merger of the other two: the fan's controls, and the
+light's *buttons* — a toggle, plus brighter and dimmer on the USB-C remote (the legacy remote has only
+the toggle). It has no light on/off switch and no slider, because the light reports nothing and those would be
+guesses. Want a light Homey tracks, with a slider and a way to correct it? Add **Fan light** instead.
+
 ## Status
 
 **It drives a real fan.** Homey paired off the handset, and the fan now answers on, off, and every
@@ -85,9 +101,9 @@ Recordings are **not committed** — they carry the code that operates the fan.
 
 ## A second remote: the CR2032 handset
 
-The Lucci **Whitehaven** fan (SKU 213042, Rhine RH787NRN receiver) ships with a coin-cell remote that
-speaks a **different protocol**, so it has drivers of its own — a fan and a light, each paired off
-your own remote — and shares nothing with the USB-C remote's except the app and the press queue.
+The Lucci **Whitehaven** fan (SKU 213042, Rhine RH787NRN receiver) ships with a legacy (CR2032) remote that
+speaks a **different protocol**, so it has drivers of its own — a fan, a light and the two together, each paired
+off your own remote — and shares nothing with the USB-C remote's except the app and the press queue.
 It has six speed buttons, power off, one reverse and one light toggle; no timer, no brightness.
 
 **Confirmed on a fan:** power off, all six speeds, starting the fan from off, and Reverse (one flip per

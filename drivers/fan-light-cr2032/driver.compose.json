@@ -1,0 +1,62 @@
+{
+  "id": "fan-light-cr2032",
+  "name": {
+    "en": "Ceiling fan + light (legacy)",
+    "nl": "Plafondventilator + lamp (legacy)",
+    "de": "Deckenventilator + Lampe (legacy)",
+    "fr": "Ventilateur de plafond + lampe (legacy)"
+  },
+  "images": {
+    "small": "/drivers/fan-light-cr2032/assets/images/small.png",
+    "large": "/drivers/fan-light-cr2032/assets/images/large.png",
+    "xlarge": "/drivers/fan-light-cr2032/assets/images/xlarge.png"
+  },
+  "class": "fan",
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "rf433"
+  ],
+  "rf433": {
+    "satelliteMode": true
+  },
+  "capabilities": [
+    "onoff",
+    "lucci_speed",
+    "lucci_reverse",
+    "lucci_toggle"
+  ],
+  "capabilitiesOptions": {
+    "lucci_speed": {
+      "preventInsights": true
+    },
+    "lucci_toggle": {
+      "title": {
+        "en": "Toggle light",
+        "nl": "Lamp omschakelen",
+        "de": "Licht umschalten",
+        "fr": "Basculer la lumière"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "learn",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

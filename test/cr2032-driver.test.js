@@ -46,7 +46,7 @@ class FakeBase {
 class FakeDriver extends FakeBase {
     constructor(homey) {
         super(homey);
-        this.manifest = { name: { en: 'Ceiling fan (coin-cell remote)' } };
+        this.manifest = { name: { en: 'Ceiling fan (legacy)' } };
         this.devices = [];
     }
 
@@ -209,7 +209,7 @@ test('a device is offered with the address and tail, and an id built from the ad
     const { driver } = await setup();
     const [offered] = driver.devicesFor({ address: ADDRESS, tail: TAIL });
 
-    assert.equal(offered.name, 'Ceiling fan (coin-cell remote)');
+    assert.equal(offered.name, 'Ceiling fan (legacy)');
     assert.equal(offered.data.id, 'lucci-cr2032-fan-1100010100101110');
     assert.deepEqual(offered.store, { address: ADDRESS, tail: TAIL });
 });
@@ -223,9 +223,9 @@ test('the fan and the light of one remote are different devices', async () => {
 
 test('a second fan is numbered, so it can be told from the first', async () => {
     const { driver } = await setup();
-    driver.devices = [{ getName: () => 'Ceiling fan (coin-cell remote)', getStoreValue: () => null }];
+    driver.devices = [{ getName: () => 'Ceiling fan (legacy)', getStoreValue: () => null }];
 
-    assert.equal(driver.devicesFor({ address: ADDRESS, tail: TAIL })[0].name, 'Ceiling fan (coin-cell remote) 2');
+    assert.equal(driver.devicesFor({ address: ADDRESS, tail: TAIL })[0].name, 'Ceiling fan (legacy) 2');
 });
 
 test('the light asks whether it is on, and keeps the answer with the device', async () => {

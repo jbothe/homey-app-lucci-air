@@ -1,0 +1,153 @@
+<style>
+    .lucci-learn {
+        /* Homey absolutely positions .hy-view to fill the pane, so this needs a
+           height of its own before justify-content can centre anything. */
+        min-height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: var(--homey-su-4) var(--homey-su-3);
+    }
+
+    .lucci-fan {
+        width: 96px;
+        height: 96px;
+        margin-bottom: 24px;
+    }
+
+    /* The brand is near-black, which disappears on Homey's dark theme. Taking
+       the text colour instead means the glyph is legible in both. */
+    .lucci-fan path, .lucci-fan circle {
+        fill: var(--homey-color-text);
+    }
+
+    .lucci-learn.is-listening .lucci-fan {
+        animation: lucci-spin 2.4s linear infinite;
+        transform-origin: 50% 50%;
+    }
+
+    @keyframes lucci-spin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+    }
+
+    .lucci-message {
+        font-size: var(--homey-font-size-default);
+        font-weight: var(--homey-font-weight-medium);
+        color: var(--homey-color-text);
+        margin: 0 0 var(--homey-su-1);
+    }
+
+    .lucci-hint {
+        font-size: var(--homey-font-size-small);
+        color: var(--homey-color-text-light);
+        margin: 0;
+        max-width: 320px;
+    }
+
+    .lucci-status {
+        font-size: var(--homey-font-size-small);
+        color: var(--homey-color-text-light);
+        opacity: 0.7;
+        margin: var(--homey-su-2) 0 0;
+        min-height: 20px;
+    }
+</style>
+
+<div class="lucci-learn" id="container">
+    <svg class="lucci-fan" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">
+        <!-- Four blades turning around the motor, the same fan as the tile. -->
+        <path d="M480.0,388.2 L480.0,100.0 Q480.0,70.0 529.5,77.1 C706.9,138.5 726.6,418.5 570.4,464.1 Z"/>
+        <path d="M571.8,480.0 L860.0,480.0 Q890.0,480.0 882.9,529.5 C821.5,706.9 541.5,726.6 495.9,570.4 Z"/>
+        <path d="M480.0,571.8 L480.0,860.0 Q480.0,890.0 430.5,882.9 C253.1,821.5 233.4,541.5 389.6,495.9 Z"/>
+        <path d="M388.2,480.0 L100.0,480.0 Q70.0,480.0 77.1,430.5 C138.5,253.1 418.5,233.4 464.1,389.6 Z"/>
+        <circle cx="480" cy="480" r="114.8"/>
+    </svg>
+
+    <p class="lucci-message" id="message"></p>
+    <p class="lucci-hint" id="hint"></p>
+    <p class="lucci-status" id="status"></p>
+
+    <button class="homey-button-primary-full" id="action" style="margin-top: 24px; display: none;"></button>
+</div>
+
+<script type="application/javascript">
+    var container = document.getElementById('container');
+    var message = document.getElementById('message');
+    var hint = document.getElementById('hint');
+    // Not `status`: window.status is a legacy string property, and a top-level
+    // `var status = <element>` assigns to it and coerces the element to
+    // "[object HTMLParagraphElement]". Every write then goes quietly nowhere and
+    // classList is undefined — with no error until something reads it back.
+    var statusLine = document.getElementById('status');
+    var action = document.getElementById('action');
+
+    var listening = false;
+    // Only ever retries. Moving on is Homey's own Continue button, in the nav bar
+    // this step asks for with its `navigation` key. Null whenever the button is
+    // hidden, which is every state but the failed one.
+    var onAction = null;
+
+    Homey.setTitle(Homey.__('pair.title'));
+
+    function setState(state, messageText, hintText, buttonKey) {
+        container.className = 'lucci-learn is-' + state;
+        message.textContent = messageText;
+        hint.textContent = hintText || '';
+
+        var showButton = Boolean(buttonKey);
+        if (showButton) action.textContent = Homey.__('pair.' + buttonKey);
+
+        // Set visibility inline. Homey's own stylesheet matches this button with
+        // [class*='homey-button'][class*='-full'], which is specificity (0,2,0)
+        // and beats any single class of ours no matter the source order — only
+        // an inline style reliably wins.
+        action.style.display = showButton ? 'inline-grid' : 'none';
+        action.disabled = !showButton;
+        // Homey styles disabled buttons via [disabled='disabled'] and .is-disabled.
+        // A JS-set .disabled reflects as disabled="" and matches neither, so the
+        // class is what actually greys the button out.
+        action.classList.toggle('is-disabled', !showButton);
+    }
+
+    // Live feedback from the driver about what Homey is actually receiving, so a
+    // silent receiver is distinguishable from an unrecognised handset.
+    Homey.on('rx', function (data) {
+        if (!data || !listening) return;
+        statusLine.textContent = Homey.__('pair.heard') + ' ' + data.heard +
+            (data.command ? ' (' + data.command + ')' : '');
+    });
+
+    function learn() {
+        listening = true;
+        onAction = null;
+        statusLine.textContent = '';
+        setState('listening', Homey.__('pair.listening'), Homey.__('pair.listening_hint'));
+
+        Homey.emit('learn')
+            .then(function () {
+                listening = false;
+                // Nothing of ours to press: Homey's Continue is already under the
+                // view and goes to the device list. Waiting for it rather than
+                // advancing on a timer is what keeps this hint readable, and it is
+                // the button people already know from every other pairing wizard.
+                onAction = null;
+                setState('found', Homey.__('pair.found'), Homey.__('pair.found_hint'));
+            })
+            .catch(function (err) {
+                listening = false;
+                onAction = learn;
+                setState('error', Homey.__('pair.failed'), (err && err.message) || '', 'retry');
+            });
+    }
+
+    action.addEventListener('click', function () {
+        if (listening || onAction === null) return;
+        onAction();
+    });
+
+    learn();
+</script>

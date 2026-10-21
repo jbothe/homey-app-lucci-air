@@ -1,10 +1,10 @@
 {
   "id": "fan-cr2032",
   "name": {
-    "en": "Ceiling fan (coin-cell remote)",
-    "nl": "Plafondventilator (knoopcelafstandsbediening)",
-    "de": "Deckenventilator (Knopfzellen-Fernbedienung)",
-    "fr": "Ventilateur de plafond (télécommande à pile bouton)"
+    "en": "Ceiling fan (legacy)",
+    "nl": "Plafondventilator (legacy)",
+    "de": "Deckenventilator (legacy)",
+    "fr": "Ventilateur de plafond (legacy)"
   },
   "images": {
     "small": "/drivers/fan-cr2032/assets/images/small.png",
