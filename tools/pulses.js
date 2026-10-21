@@ -531,12 +531,22 @@ function alphabetFrom(types, pulseClusters, gapClusters) {
 //      far from both.
 //   4. least claimed as preamble, so payload is never eaten.
 //
+// `shortestPreamble` moves 4 ahead of 3, for a transmitter whose first few
+// symbols are noisy. A preamble claimed too long can only swallow constant
+// address bits - never leave extra symbol types behind, which is what a short
+// one does - so among readings that explain the same frames with the same
+// alphabet the shortest is the one that ate nothing. But the receiver's gain
+// is still settling over the first few symbols of a burst, so those are the
+// ones with the worst fit, and swallowing them into the preamble LOWERS the
+// residual: criterion 3 then rewards exactly the mistake. Off by default,
+// because the sibling captures were settled under the original order.
+//
 // The recurrence floor is applied and relaxed, and both results compete, so a
 // protocol that uses some symbol only once per frame can still be read. The
 // floor is not a precondition but a preference: a reading that admits a glitch
 // as a symbol needs one more symbol than the same reading without it, and so
 // loses on the first criterion.
-function inferAlignment(frames) {
+function inferAlignment(frames, { shortestPreamble = false } = {}) {
     const scored = [];
 
     for (const floorPerFrame of [SYMBOL_MIN_PER_FRAME, 0]) {
@@ -549,10 +559,15 @@ function inferAlignment(frames) {
     }
     if (scored.length === 0) return null;
 
-    scored.sort((a, b) => a.alphabet.length - b.alphabet.length
-        || b.explained - a.explained
-        || a.residual - b.residual
-        || a.sofLength - b.sofLength);
+    scored.sort(shortestPreamble
+        ? (a, b) => a.alphabet.length - b.alphabet.length
+            || b.explained - a.explained
+            || a.sofLength - b.sofLength
+            || a.residual - b.residual
+        : (a, b) => a.alphabet.length - b.alphabet.length
+            || b.explained - a.explained
+            || a.residual - b.residual
+            || a.sofLength - b.sofLength);
     return scored[0];
 }
 
@@ -626,7 +641,7 @@ function analyseCapture(durations, label = 'capture') {
 // one capture at a time. Pooling the frames is what makes the fields visible:
 // a position is only address if it holds still across every button, and only
 // command if it moves between them.
-function analyseCaptures(blocks) {
+function analyseCaptures(blocks, options = {}) {
     const captures = blocks.map(({ label, durations }) => {
         const { durations: clean, repaired } = repairSpikes(durations);
         const threshold = separatorThreshold(clean);
@@ -646,7 +661,7 @@ function analyseCaptures(blocks) {
     }));
 
     const pooled = whole.flatMap(c => c.whole);
-    const alignment = pooled.length > 0 ? inferAlignment(pooled) : null;
+    const alignment = pooled.length > 0 ? inferAlignment(pooled, options) : null;
     if (alignment === null) {
         return { captures: whole, frameLength: length, alignment: null, reads: [], positions: [] };
     }
