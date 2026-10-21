@@ -25,7 +25,7 @@ with the recordings and has not been seen to work.
 |---|---|
 | OFF at 9 repetitions stops a running fan | **verified**, twice |
 | OFF at 1, 2 or 5 repetitions | **does not work** (one trial each; 3, 4, 6, 7, 8 untried) |
-| the speeds | **verified**: all work from Homey (the logs seen cover steps 0, 1, 3 and 5; the rest is reported) |
+| the speeds | **verified**: all six work from Homey, each seen sent in a log and confirmed on the fan |
 | Reverse flips the direction **once per press** at 9 repetitions | **verified**; the double-flip risk did not appear |
 | `onoff` true from off starts the fan at the stored speed | **verified** |
 | the remote's OFF and light button, received | **verified** (the tiles followed them) |
@@ -33,7 +33,7 @@ with the recordings and has not been seen to work.
 | pairing both devices off the real remote | **verified on a Homey** (address and tail learned and stored) |
 | receiving this signal on Homey | **verified for `light.toggle`** (the belief followed the remote, twice); other buttons not yet watched |
 
-| Reverse sent to a stopped fan | **unanswered** |
+| Reverse sent to a stopped fan | **verified**: ignored, and not remembered. Restarted, the fan turns the way it was |
 | a power cut at the wall while running at VI, then a different speed | **verified**: the fan resumed at VI and Speed I was honoured at once. No "start on VI first" obstacle in this case |
 | a power cut while the fan was stopped, then a non-VI speed | **not tested** |
 | response time | **observed**: a speed change shows within a few seconds; a direction change is slow, because the fan slows to a stop before turning the other way |
@@ -119,6 +119,12 @@ a direction nobody knows: the fan reports nothing, the first value is a guess, a
 the remote, the wall switch or a power cut changes the fan. A **Change direction** button claims only
 what is true (one flip was sent), is correct however the fan got where it is, and suits a fan that takes
 a while to answer, where a person presses, watches, and presses again.
+
+**A direction change is ignored while the fan is stopped, and not remembered**: restarted, it turns the
+way it was. The button is still sent when Homey believes the fan off: the remote's own button behaves the
+same, and the belief can be wrong, so an unsent press cannot be right. (The USB-C light refuses
+brightness while believed off; this deliberately does not.) The one line it logs says what the press
+will do.
 
 What it costs: no direction on the tile, and nothing to build a flow condition on. A device paired
 while the picker existed keeps its old capabilities: remove it and add it again.

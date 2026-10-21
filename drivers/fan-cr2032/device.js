@@ -150,18 +150,20 @@ class Cr2032FanDevice extends Homey.Device {
     }
 
     // One reverse press. Nothing is remembered about it.
+    //
+    // **The fan ignores a direction change while it is stopped, and does not keep
+    // it**: restarted, it turns the way it was. Confirmed on the hardware. It is
+    // still sent when Homey believes the fan off, and that was decided rather than
+    // overlooked: the remote's own button does the same, and the belief can be wrong,
+    // so a press that is not sent cannot be right. (The USB-C light refuses
+    // brightness while believed off; this does not, on purpose.) The one line
+    // logged for the press says what it will do.
     async reverse(why) {
+        const note = this.on ? why : `${why}; fan believed off, which ignores direction until it runs`;
         try {
-            await this.send('fan.reverse', why);
+            await this.send('fan.reverse', note);
         } catch (err) {
             throw new Error(this.homey.__('errors.tx_failed'));
-        }
-
-        // Asked at the only moment it can be answered. Whether a reverse press
-        // does anything to a stopped fan has not been tested.
-        if (!this.on) {
-            this.log('reverse sent while the fan was believed off - did anything happen?'
-                + ' Open question in RF_PROTOCOL_CR2032.md.');
         }
     }
 

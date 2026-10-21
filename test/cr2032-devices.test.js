@@ -207,14 +207,25 @@ test('a press that never reached the air is reported, not swallowed', async () =
     assert.ok(device.logs.some(l => l.includes('payload was [')), 'the payload is logged for diagnosis');
 });
 
-test('a reverse sent to a fan believed off is flagged as the open question it is', async () => {
+test('a reverse is still sent to a fan believed off, and says so in its one log line', async () => {
+    // The fan ignores a direction change while stopped - but Homey's belief can be
+    // wrong, so the press goes out, and the log says what it will do.
     const stopped = await fan({ capabilities: { onoff: false } });
+    const before = stopped.logs.length;
     await setOne(stopped, 'lucci_reverse', true);
-    assert.ok(stopped.logs.some(l => l.includes('reverse sent while the fan was believed off')), stopped.logs.join(' | '));
+
+    assert.deepEqual(keysSent(stopped), ['fan.reverse']);
+    const lines = stopped.logs.slice(before);
+    assert.equal(lines.length, 1, `one line per press: ${lines.join(' | ')}`);
+    assert.match(lines[0], /^tx fan\.reverse ok \(lucci_reverse; fan believed off, which ignores direction until it runs, queued in \d+ms\)$/);
 
     const running = await fan({ capabilities: { onoff: true } });
+    const was = running.logs.length;
     await setOne(running, 'lucci_reverse', true);
-    assert.equal(running.logs.some(l => l.includes('believed off')), false);
+    const runningLines = running.logs.slice(was);
+    assert.equal(runningLines.length, 1);
+    assert.equal(runningLines[0].includes('believed off'), false);
+    assert.equal(runningLines.some(l => l.includes('Open question')), false, 'the question is answered');
 });
 
 test('hearing reverse from the remote is noted and changes nothing', async () => {
