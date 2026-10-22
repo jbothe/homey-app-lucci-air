@@ -1,11 +1,17 @@
-Ein Deckenventilator gehört zu den wenigen Dingen im Haus, die noch per Handsender gesteuert werden. Diese App bringt einen Lucci Air-Ventilator in Homey, damit er sich vom Smartphone starten, per Flow ausschalten lässt, sobald der Raum abgekühlt ist, oder abends auf eine leise Stufe gestellt werden kann.
+Steuert Lucci Air-Deckenventilatoren und ihre Lampen von Homey aus, mit denselben 433-MHz-Codes wie der Handsender.
 
-Homey lernt Ihren eigenen Handsender, wenn Sie den Ventilator hinzufügen, und spricht deshalb nur mit Ihrem Ventilator, nie mit dem der Nachbarn. Auch danach hört Homey weiter zu: Wird der Handsender benutzt, bekommt Homey das mit und bleibt auf dem Laufenden, statt stillschweigend einen veralteten Stand zu behalten.
+Beim Hinzufügen eines Ventilators drücken Sie eine Taste am Handsender, und Homey lernt dessen Adresse, sodass es nur mit Ihrem Ventilator spricht. Homey hört danach weiter zu, daher erscheinen Änderungen per Handsender in Homey.
 
-Zwei Arten von Handsendern werden unterstützt, jeweils mit Ihrer eigenen Fernbedienung hinzugefügt: der wiederaufladbare USB-C-Handsender (Ventilator ein und aus, sechs Stufen, Drehrichtung und Timer sowie Ein/Aus und Helligkeit der Lampe) und der ältere mit CR2032-Batterie (Ausschalten, sechs Stufen, Umkehren und ein Lichtschalter). Fügen Sie den Ventilator, die Lampe oder beides auf einer Kachel hinzu.
+Zwei Handsender werden unterstützt:
+- USB-C, wiederaufladbar: Ventilator ein/aus, sechs Stufen, Drehrichtung und Timer; Lampe ein/aus und Helligkeit.
+- CR2032: Aus, sechs Stufen, Umkehren und ein Lichtschalter.
 
-Ventilator und Lampe melden nichts zurück, daher zeigt Homey, was zuletzt gesendet oder mitgehört wurde. Das Licht hat am Handsender nur eine Umschalttaste für Ein und Aus; Homey fragt deshalb beim Hinzufügen, ob die Lampe an ist, und bietet eine Taste, um den Stand zu korrigieren, falls beides auseinanderläuft.
+Fügen Sie den Ventilator, die Lampe oder beides auf einer Kachel hinzu.
 
-Diese App ahmt den Handsender per 433-MHz-Funk nach. Sie funktioniert nicht mit Lucci Connect, dem separaten WLAN-Zusatz, der ein anderes Produkt ist.
+Einschränkungen:
+- Ventilator und Lampe senden nichts zurück. Homey zeigt, was es zuletzt gesendet oder gehört hat.
+- Ein/Aus der Lampe ist eine Umschalttaste. Homey fragt beim Hinzufügen, ob die Lampe an ist, und eine Taste korrigiert den Stand, wenn er nicht mehr stimmt.
+- Die Lampe wurde nicht an einem echten Ventilator getestet.
+- Diese App ahmt den Handsender per 433 MHz nach. Sie funktioniert nicht mit Lucci Connect, dem separaten WLAN-Zusatz.
 
-Diese App wird weder von Beacon Lighting noch von Lucci hergestellt, empfohlen oder unterstützt.
+Nicht von Beacon Lighting oder Lucci hergestellt, empfohlen oder unterstützt.

@@ -1,11 +1,17 @@
-Een plafondventilator is een van de weinige dingen in huis die nog met een handzender worden bediend. Deze app brengt een Lucci Air-ventilator in Homey, zodat je hem vanaf je telefoon kunt starten, met een Flow kunt uitzetten zodra de kamer is afgekoeld, of 's avonds op een stille stand kunt zetten.
+Bedient Lucci Air-plafondventilatoren en hun lampen vanuit Homey, met dezelfde 433 MHz-codes als de handzender.
 
-Homey leert je eigen handzender wanneer je de ventilator toevoegt, zodat hij alleen met jouw ventilator praat en nooit met die van de buren. Homey blijft daarna ook luisteren: gebruikt iemand de handzender, dan hoort Homey dat en blijft hij bij, in plaats van stilletjes een verouderd beeld van de ventilator vast te houden.
+Bij het toevoegen van een ventilator druk je op een knop van je handzender en leert Homey het adres, zodat Homey alleen met jouw ventilator praat. Homey blijft daarna luisteren, dus wijzigingen via de handzender verschijnen in Homey.
 
-Twee soorten handzenders worden ondersteund, elk toegevoegd met je eigen afstandsbediening: de oplaadbare USB-C-versie (ventilator aan en uit, zes standen, draairichting en een timer, plus aan/uit en helderheid van de lamp) en de oudere CR2032-versie (uitzetten, zes standen, omkeren en een lampschakelaar). Voeg de ventilator, de lamp of allebei op één tegel toe.
+Twee handzenders worden ondersteund:
+- USB-C, oplaadbaar: ventilator aan/uit, zes standen, draairichting en timer; lamp aan/uit en helderheid.
+- CR2032: uit, zes standen, omkeren en een lampschakelaar.
 
-De ventilator en de lamp melden niets terug, dus wat Homey toont is wat het laatst heeft verstuurd of opgevangen. De lamp heeft op de handzender één wisselknop voor aan en uit; Homey vraagt daarom bij het toevoegen of de lamp aan is, en biedt een knop om het recht te zetten als de twee uit de pas lopen.
+Voeg de ventilator, de lamp of allebei op één tegel toe.
 
-Deze app bootst de handzender na via 433 MHz-radio. Hij werkt niet met Lucci Connect, de losse wifi-uitbreiding, een ander product.
+Beperkingen:
+- De ventilator en de lamp sturen niets terug. Homey toont wat het het laatst heeft verstuurd of gehoord.
+- Aan/uit van de lamp is een wisselschakelaar. Homey vraagt bij het toevoegen of de lamp aan is, en een knop zet het recht als het niet meer klopt.
+- De lamp is niet getest op een echte ventilator.
+- Deze app bootst de handzender na via 433 MHz. Hij werkt niet met Lucci Connect, de losse wifi-uitbreiding.
 
-Deze app is niet gemaakt, goedgekeurd of ondersteund door Beacon Lighting of Lucci.
+Niet gemaakt, goedgekeurd of ondersteund door Beacon Lighting of Lucci.

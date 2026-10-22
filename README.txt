@@ -1,11 +1,17 @@
-A ceiling fan is one of the few things in the house still run by a handset on the wall or the bedside table. This app brings a Lucci Air fan into Homey, so it can be started from your phone, switched off by a Flow when the room has cooled, or set to a quiet speed at bedtime.
+Controls Lucci Air ceiling fans and their lights from Homey by sending the same 433 MHz codes as the handset.
 
-Homey learns your own handset when you add the fan, so it only ever speaks to your fan and never to a neighbour's. It keeps listening afterwards too: when someone uses the handset, Homey hears it and keeps up, rather than quietly holding an out-of-date idea of what the fan is doing.
+When you add a fan, you press a button on your handset and Homey learns its address, so it only talks to your fan. Homey keeps listening afterwards, so changes made with the handset show up in Homey.
 
-Two kinds of handset are supported, each added from your own remote: the USB-C rechargeable one (fan on and off, six speeds, direction and a timer, plus the light's on/off and brightness) and the older CR2032 one (power off, six speeds, reverse and a light toggle). Add the fan, the light, or both on one tile.
+Two handsets are supported:
+- USB-C rechargeable: fan on/off, six speeds, direction and timer; light on/off and brightness.
+- CR2032: off, six speeds, reverse and a light toggle.
 
-The fan and the light never report back, so what Homey shows is what it last sent or overheard. The light's on/off is a single toggle on the handset, so Homey asks whether the light is on when you add it and offers a button to put it right if the two ever drift apart.
+Add the fan, the light, or both on one tile.
 
-This app emulates the handset over 433 MHz radio. It does not work with Lucci Connect, the separate Wi-Fi add-on, which is a different product.
+Limitations:
+- The fan and light send nothing back. Homey shows what it last sent or heard.
+- The light's on/off is a toggle. Homey asks whether the light is on when you add it, and a button corrects it if it gets out of step.
+- The light has not been tested on a real fan.
+- This app emulates the handset over 433 MHz. It does not work with Lucci Connect, the separate Wi-Fi add-on.
 
-This app is not made, endorsed or supported by Beacon Lighting or Lucci.
+Not made, endorsed or supported by Beacon Lighting or Lucci.
