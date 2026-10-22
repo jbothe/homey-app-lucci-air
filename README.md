@@ -40,7 +40,7 @@ the protocol is no longer a hypothesis.
 | the light — on/off, two step buttons, a slider, calibrate | [`drivers/light/`](drivers/light) |
 | brightness arithmetic, tested on its own | [`lib/light-position.js`](lib/light-position.js) |
 | pairing — learns the address off your own handset | [`lib/lucci-driver.js`](lib/lucci-driver.js) |
-| still to come | flow cards, store assets |
+| still to come \| flow cards |
 
 Because speed, direction and the timer are absolute — the handset sends the state it is moving to,
 not "faster" — a frame Homey overhears gives the exact state rather than a hint. So using the
