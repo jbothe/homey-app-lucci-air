@@ -6,6 +6,7 @@ const {
 } = require('../../lib/cr2032-protocol');
 const { reflect } = require('../../lib/reflect');
 const { pressQueue, RELEASE_GAP } = require('../../lib/press-queue');
+const { announceChange } = require('../../lib/flow');
 
 // The fan this drives is a Lucci Whitehaven with a Rhine RH787NRN receiver. It
 // has a power-off and six speed buttons, which are absolute, and ONE direction
@@ -124,7 +125,9 @@ class Cr2032FanDevice extends Homey.Device {
     // would throw inside its own handler and lose the original.
     async set(capability, value) {
         try {
+            const before = this.getCapabilityValue(capability);
             await this.setCapabilityValue(capability, value);
+            if (before !== value) announceChange(this, capability, value);
             return true;
         } catch (err) {
             this.error(`could not set ${capability} to ${JSON.stringify(value)}:`, err.message);
@@ -202,6 +205,7 @@ class Cr2032FanDevice extends Homey.Device {
 
         await this.send(`fan.speed.${step}`, why);
 
+        if (asked !== undefined && this.getCapabilityValue('lucci_speed') !== asked) announceChange(this, 'lucci_speed', asked);
         reflect(this, { onoff: true, lucci_speed: step }, values);
     }
 

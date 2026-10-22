@@ -20,6 +20,7 @@ class FakeDevice {
         this.logs = [];
         this.rejectSetOf = null;
         this.rxListeners = new Set();
+        this.triggered = [];
 
         this.homey = {
             // Wrapped rather than passed by reference, so a test's mocked timers
@@ -27,6 +28,11 @@ class FakeDevice {
             setTimeout: (...args) => setTimeout(...args),
             clearTimeout: (...args) => clearTimeout(...args),
             __: key => key,
+            flow: {
+                getDeviceTriggerCard: id => ({
+                    trigger: async (device, tokens, state) => { this.triggered.push({ id, value: state.value }); },
+                }),
+            },
             rf: {
                 getSignal433: () => ({
                     tx: async payload => { this.sent.push(payload); },
@@ -562,4 +568,54 @@ test('a frame with the right address but a different bit 24 is still acted on', 
 
     assert.equal(mine.capabilityValues.lucci_speed, '3');
     assert.ok(mine.logs.some(line => line.includes('arrived with bit 24 1')), mine.logs.join(' | '));
+});
+
+// -------------------------------------------------------------- flow triggers --
+
+test('a speed picked in Homey fires the speed trigger once, and not again when it is written back', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    await request(fan, { lucci_speed: '4' });
+
+    assert.deepEqual(fan.triggered, [{ id: 'fan_speed_changed', value: '4' }]);
+});
+
+test('a speed pressed on the handset fires the speed trigger, and a repeat of it does not', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    await heard(fan, 'fan.speed.5');
+    assert.deepEqual(fan.triggered, [{ id: 'fan_speed_changed', value: '5' }]);
+
+    await heard(fan, 'fan.speed.5');
+    assert.equal(fan.triggered.length, 1, 'the same step again is not a change');
+});
+
+test('turning the fan off or on without a new speed fires no speed trigger', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    await request(fan, { onoff: false });
+    await request(fan, { onoff: true });
+
+    assert.deepEqual(fan.triggered, []);
+});
+
+test('direction and timer fire their own triggers, from Homey and from the handset', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    await setOne(fan, 'lucci_direction', 'reverse');
+    await setOne(fan, 'lucci_timer', '4h');
+    await heard(fan, 'fan.direction.forward');
+    await heard(fan, 'fan.timer.8h');
+
+    assert.deepEqual(fan.triggered, [
+        { id: 'fan_direction_changed', value: 'reverse' },
+        { id: 'fan_timer_changed', value: '4h' },
+        { id: 'fan_direction_changed', value: 'forward' },
+        { id: 'fan_timer_changed', value: '8h' },
+    ]);
+});
+
+test('a trigger that fails does not fail the change', async () => {
+    const fan = await device({ speed: '2', onoff: true });
+    fan.homey.flow.getDeviceTriggerCard = () => ({ trigger: async () => { throw new Error('no such flow'); } });
+    await heard(fan, 'fan.speed.5');
+
+    assert.equal(fan.capabilityValues.lucci_speed, '5');
+    assert.ok(fan.logs.some(line => line.includes('flow trigger fan_speed_changed failed')));
 });

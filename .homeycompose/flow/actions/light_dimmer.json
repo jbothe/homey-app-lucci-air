@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "Make the light dimmer",
+    "nl": "Maak de lamp zwakker",
+    "de": "Licht dunkler machen",
+    "fr": "Diminuer la luminosité"
+  },
+  "hint": {
+    "en": "One step dimmer. Ignored while the light is off.",
+    "nl": "Eén stap zwakker. Genegeerd als de lamp uit is.",
+    "de": "Eine Stufe dunkler. Wird ignoriert, solange die Lampe aus ist.",
+    "fr": "Un cran moins lumineux. Ignoré tant que la lampe est éteinte."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=light|fan-light"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "title": {
+    "en": "The fan direction changed to",
+    "nl": "De draairichting is veranderd naar",
+    "de": "Die Drehrichtung hat sich geändert auf",
+    "fr": "Le sens de rotation est passé à"
+  },
+  "titleFormatted": {
+    "en": "The fan direction changed to [[direction]]",
+    "nl": "De draairichting is veranderd naar [[direction]]",
+    "de": "Die Drehrichtung hat sich auf [[direction]] geändert",
+    "fr": "Le sens de rotation est passé à [[direction]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=fan|fan-light"
+    },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": {
+        "en": "Direction",
+        "nl": "Draairichting",
+        "de": "Drehrichtung",
+        "fr": "Sens"
+      },
+      "values": [
+        {
+          "id": "forward",
+          "label": {
+            "en": "Forward",
+            "nl": "Vooruit",
+            "de": "Vorwärts",
+            "fr": "Avant"
+          }
+        },
+        {
+          "id": "reverse",
+          "label": {
+            "en": "Reverse",
+            "nl": "Achteruit",
+            "de": "Rückwärts",
+            "fr": "Arrière"
+          }
+        }
+      ]
+    }
+  ]
+}

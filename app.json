@@ -78,6 +78,732 @@
   },
   "support": "https://github.com/jbothe/homey-app-lucci-air/issues",
   "source": "https://github.com/jbothe/homey-app-lucci-air",
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "The fan direction changed to",
+          "nl": "De draairichting is veranderd naar",
+          "de": "Die Drehrichtung hat sich geändert auf",
+          "fr": "Le sens de rotation est passé à"
+        },
+        "titleFormatted": {
+          "en": "The fan direction changed to [[direction]]",
+          "nl": "De draairichting is veranderd naar [[direction]]",
+          "de": "Die Drehrichtung hat sich auf [[direction]] geändert",
+          "fr": "Le sens de rotation est passé à [[direction]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "nl": "Draairichting",
+              "de": "Drehrichtung",
+              "fr": "Sens"
+            },
+            "values": [
+              {
+                "id": "forward",
+                "label": {
+                  "en": "Forward",
+                  "nl": "Vooruit",
+                  "de": "Vorwärts",
+                  "fr": "Avant"
+                }
+              },
+              {
+                "id": "reverse",
+                "label": {
+                  "en": "Reverse",
+                  "nl": "Achteruit",
+                  "de": "Rückwärts",
+                  "fr": "Arrière"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "fan_direction_changed"
+      },
+      {
+        "title": {
+          "en": "The fan speed changed to",
+          "nl": "De ventilatorsnelheid is veranderd naar",
+          "de": "Die Lüftergeschwindigkeit hat sich geändert auf",
+          "fr": "La vitesse du ventilateur est passée à"
+        },
+        "titleFormatted": {
+          "en": "The fan speed changed to [[speed]]",
+          "nl": "De ventilatorsnelheid is veranderd naar [[speed]]",
+          "de": "Die Lüftergeschwindigkeit hat sich auf [[speed]] geändert",
+          "fr": "La vitesse du ventilateur est passée à [[speed]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light|fan-cr2032|fan-light-cr2032"
+          },
+          {
+            "type": "dropdown",
+            "name": "speed",
+            "title": {
+              "en": "Speed",
+              "nl": "Snelheid",
+              "de": "Geschwindigkeit",
+              "fr": "Vitesse"
+            },
+            "values": [
+              {
+                "id": "0",
+                "label": {
+                  "en": "Lowest",
+                  "nl": "Laagst",
+                  "de": "Niedrigste",
+                  "fr": "Minimale"
+                }
+              },
+              {
+                "id": "1",
+                "label": {
+                  "en": "Low",
+                  "nl": "Laag",
+                  "de": "Niedrig",
+                  "fr": "Faible"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Medium-low",
+                  "nl": "Middellaag",
+                  "de": "Mittelniedrig",
+                  "fr": "Moyen-faible"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Medium-high",
+                  "nl": "Middelhoog",
+                  "de": "Mittelhoch",
+                  "fr": "Moyen-élevé"
+                }
+              },
+              {
+                "id": "4",
+                "label": {
+                  "en": "High",
+                  "nl": "Hoog",
+                  "de": "Hoch",
+                  "fr": "Élevé"
+                }
+              },
+              {
+                "id": "5",
+                "label": {
+                  "en": "Highest",
+                  "nl": "Hoogst",
+                  "de": "Höchste",
+                  "fr": "Maximale"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "fan_speed_changed"
+      },
+      {
+        "title": {
+          "en": "The fan timer changed to",
+          "nl": "De timer is veranderd naar",
+          "de": "Der Timer hat sich geändert auf",
+          "fr": "La minuterie est passée à"
+        },
+        "titleFormatted": {
+          "en": "The fan timer changed to [[timer]]",
+          "nl": "De timer is veranderd naar [[timer]]",
+          "de": "Der Timer hat sich auf [[timer]] geändert",
+          "fr": "La minuterie est passée à [[timer]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light"
+          },
+          {
+            "type": "dropdown",
+            "name": "timer",
+            "title": {
+              "en": "Timer",
+              "nl": "Timer",
+              "de": "Timer",
+              "fr": "Minuterie"
+            },
+            "values": [
+              {
+                "id": "off",
+                "label": {
+                  "en": "Off",
+                  "nl": "Uit",
+                  "de": "Aus",
+                  "fr": "Désactivé"
+                }
+              },
+              {
+                "id": "2h",
+                "label": {
+                  "en": "2 hours",
+                  "nl": "2 uur",
+                  "de": "2 Stunden",
+                  "fr": "2 heures"
+                }
+              },
+              {
+                "id": "4h",
+                "label": {
+                  "en": "4 hours",
+                  "nl": "4 uur",
+                  "de": "4 Stunden",
+                  "fr": "4 heures"
+                }
+              },
+              {
+                "id": "8h",
+                "label": {
+                  "en": "8 hours",
+                  "nl": "8 uur",
+                  "de": "8 Stunden",
+                  "fr": "8 heures"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "fan_timer_changed"
+      }
+    ],
+    "conditions": [
+      {
+        "title": {
+          "en": "The fan direction is",
+          "nl": "De draairichting is",
+          "de": "Die Drehrichtung ist",
+          "fr": "Le sens de rotation est"
+        },
+        "titleFormatted": {
+          "en": "The fan direction !{{is|is not}} [[direction]]",
+          "nl": "De draairichting !{{is|is niet}} [[direction]]",
+          "de": "Die Drehrichtung !{{ist|ist nicht}} [[direction]]",
+          "fr": "Le sens de rotation !{{est|n'est pas}} [[direction]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "nl": "Draairichting",
+              "de": "Drehrichtung",
+              "fr": "Sens"
+            },
+            "values": [
+              {
+                "id": "forward",
+                "label": {
+                  "en": "Forward",
+                  "nl": "Vooruit",
+                  "de": "Vorwärts",
+                  "fr": "Avant"
+                }
+              },
+              {
+                "id": "reverse",
+                "label": {
+                  "en": "Reverse",
+                  "nl": "Achteruit",
+                  "de": "Rückwärts",
+                  "fr": "Arrière"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "fan_direction_is"
+      },
+      {
+        "title": {
+          "en": "The fan speed is",
+          "nl": "De ventilatorsnelheid is",
+          "de": "Die Lüftergeschwindigkeit ist",
+          "fr": "La vitesse du ventilateur est"
+        },
+        "titleFormatted": {
+          "en": "The fan speed !{{is|is not}} [[speed]]",
+          "nl": "De ventilatorsnelheid !{{is|is niet}} [[speed]]",
+          "de": "Die Lüftergeschwindigkeit !{{ist|ist nicht}} [[speed]]",
+          "fr": "La vitesse du ventilateur !{{est|n'est pas}} [[speed]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light|fan-cr2032|fan-light-cr2032"
+          },
+          {
+            "type": "dropdown",
+            "name": "speed",
+            "title": {
+              "en": "Speed",
+              "nl": "Snelheid",
+              "de": "Geschwindigkeit",
+              "fr": "Vitesse"
+            },
+            "values": [
+              {
+                "id": "0",
+                "label": {
+                  "en": "Lowest",
+                  "nl": "Laagst",
+                  "de": "Niedrigste",
+                  "fr": "Minimale"
+                }
+              },
+              {
+                "id": "1",
+                "label": {
+                  "en": "Low",
+                  "nl": "Laag",
+                  "de": "Niedrig",
+                  "fr": "Faible"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Medium-low",
+                  "nl": "Middellaag",
+                  "de": "Mittelniedrig",
+                  "fr": "Moyen-faible"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Medium-high",
+                  "nl": "Middelhoog",
+                  "de": "Mittelhoch",
+                  "fr": "Moyen-élevé"
+                }
+              },
+              {
+                "id": "4",
+                "label": {
+                  "en": "High",
+                  "nl": "Hoog",
+                  "de": "Hoch",
+                  "fr": "Élevé"
+                }
+              },
+              {
+                "id": "5",
+                "label": {
+                  "en": "Highest",
+                  "nl": "Hoogst",
+                  "de": "Höchste",
+                  "fr": "Maximale"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "fan_speed_is"
+      },
+      {
+        "title": {
+          "en": "The fan timer is",
+          "nl": "De timer is",
+          "de": "Der Timer ist",
+          "fr": "La minuterie est"
+        },
+        "titleFormatted": {
+          "en": "The fan timer !{{is|is not}} [[timer]]",
+          "nl": "De timer !{{is|is niet}} [[timer]]",
+          "de": "Der Timer !{{ist|ist nicht}} [[timer]]",
+          "fr": "La minuterie !{{est|n'est pas}} [[timer]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light"
+          },
+          {
+            "type": "dropdown",
+            "name": "timer",
+            "title": {
+              "en": "Timer",
+              "nl": "Timer",
+              "de": "Timer",
+              "fr": "Minuterie"
+            },
+            "values": [
+              {
+                "id": "off",
+                "label": {
+                  "en": "Off",
+                  "nl": "Uit",
+                  "de": "Aus",
+                  "fr": "Désactivé"
+                }
+              },
+              {
+                "id": "2h",
+                "label": {
+                  "en": "2 hours",
+                  "nl": "2 uur",
+                  "de": "2 Stunden",
+                  "fr": "2 heures"
+                }
+              },
+              {
+                "id": "4h",
+                "label": {
+                  "en": "4 hours",
+                  "nl": "4 uur",
+                  "de": "4 Stunden",
+                  "fr": "4 heures"
+                }
+              },
+              {
+                "id": "8h",
+                "label": {
+                  "en": "8 hours",
+                  "nl": "8 uur",
+                  "de": "8 Stunden",
+                  "fr": "8 heures"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "fan_timer_is"
+      }
+    ],
+    "actions": [
+      {
+        "title": {
+          "en": "Change the fan direction",
+          "nl": "Wijzig de draairichting",
+          "de": "Drehrichtung ändern",
+          "fr": "Changer le sens de rotation"
+        },
+        "hint": {
+          "en": "Sends the remote's reverse button, which flips the direction once. The remote does not say which way the fan turns, so Homey cannot show it.",
+          "nl": "Stuurt de omkeerknop van de afstandsbediening, die de draairichting één keer omdraait. De afstandsbediening meldt niet welke kant de ventilator draait, dus Homey kan dat niet tonen.",
+          "de": "Sendet die Umkehrtaste der Fernbedienung, die die Drehrichtung einmal umkehrt. Die Fernbedienung meldet nicht, in welche Richtung sich der Ventilator dreht, daher kann Homey sie nicht anzeigen.",
+          "fr": "Envoie la touche d'inversion de la télécommande, qui inverse le sens une fois. La télécommande n'indique pas le sens de rotation, Homey ne peut donc pas l'afficher."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan-cr2032|fan-light-cr2032"
+          }
+        ],
+        "id": "change_fan_direction"
+      },
+      {
+        "title": {
+          "en": "Make the light brighter",
+          "nl": "Maak de lamp helderder",
+          "de": "Licht heller machen",
+          "fr": "Augmenter la luminosité"
+        },
+        "hint": {
+          "en": "One step brighter. Ignored while the light is off.",
+          "nl": "Eén stap helderder. Genegeerd als de lamp uit is.",
+          "de": "Eine Stufe heller. Wird ignoriert, solange die Lampe aus ist.",
+          "fr": "Un cran plus lumineux. Ignoré tant que la lampe est éteinte."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=light|fan-light"
+          }
+        ],
+        "id": "light_brighter"
+      },
+      {
+        "title": {
+          "en": "Make the light dimmer",
+          "nl": "Maak de lamp zwakker",
+          "de": "Licht dunkler machen",
+          "fr": "Diminuer la luminosité"
+        },
+        "hint": {
+          "en": "One step dimmer. Ignored while the light is off.",
+          "nl": "Eén stap zwakker. Genegeerd als de lamp uit is.",
+          "de": "Eine Stufe dunkler. Wird ignoriert, solange die Lampe aus ist.",
+          "fr": "Un cran moins lumineux. Ignoré tant que la lampe est éteinte."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=light|fan-light"
+          }
+        ],
+        "id": "light_dimmer"
+      },
+      {
+        "title": {
+          "en": "Set the fan direction",
+          "nl": "Stel de draairichting in",
+          "de": "Drehrichtung einstellen",
+          "fr": "Régler le sens de rotation"
+        },
+        "titleFormatted": {
+          "en": "Set the fan direction to [[direction]]",
+          "nl": "Stel de draairichting in op [[direction]]",
+          "de": "Drehrichtung auf [[direction]] einstellen",
+          "fr": "Régler le sens de rotation sur [[direction]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "nl": "Draairichting",
+              "de": "Drehrichtung",
+              "fr": "Sens"
+            },
+            "values": [
+              {
+                "id": "forward",
+                "label": {
+                  "en": "Forward",
+                  "nl": "Vooruit",
+                  "de": "Vorwärts",
+                  "fr": "Avant"
+                }
+              },
+              {
+                "id": "reverse",
+                "label": {
+                  "en": "Reverse",
+                  "nl": "Achteruit",
+                  "de": "Rückwärts",
+                  "fr": "Arrière"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_fan_direction"
+      },
+      {
+        "title": {
+          "en": "Set the fan speed",
+          "nl": "Stel de ventilatorsnelheid in",
+          "de": "Lüftergeschwindigkeit einstellen",
+          "fr": "Régler la vitesse du ventilateur"
+        },
+        "titleFormatted": {
+          "en": "Set the fan speed to [[speed]]",
+          "nl": "Stel de ventilatorsnelheid in op [[speed]]",
+          "de": "Lüftergeschwindigkeit auf [[speed]] einstellen",
+          "fr": "Régler la vitesse du ventilateur sur [[speed]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light|fan-cr2032|fan-light-cr2032"
+          },
+          {
+            "type": "dropdown",
+            "name": "speed",
+            "title": {
+              "en": "Speed",
+              "nl": "Snelheid",
+              "de": "Geschwindigkeit",
+              "fr": "Vitesse"
+            },
+            "values": [
+              {
+                "id": "0",
+                "label": {
+                  "en": "Lowest",
+                  "nl": "Laagst",
+                  "de": "Niedrigste",
+                  "fr": "Minimale"
+                }
+              },
+              {
+                "id": "1",
+                "label": {
+                  "en": "Low",
+                  "nl": "Laag",
+                  "de": "Niedrig",
+                  "fr": "Faible"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Medium-low",
+                  "nl": "Middellaag",
+                  "de": "Mittelniedrig",
+                  "fr": "Moyen-faible"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Medium-high",
+                  "nl": "Middelhoog",
+                  "de": "Mittelhoch",
+                  "fr": "Moyen-élevé"
+                }
+              },
+              {
+                "id": "4",
+                "label": {
+                  "en": "High",
+                  "nl": "Hoog",
+                  "de": "Hoch",
+                  "fr": "Élevé"
+                }
+              },
+              {
+                "id": "5",
+                "label": {
+                  "en": "Highest",
+                  "nl": "Hoogst",
+                  "de": "Höchste",
+                  "fr": "Maximale"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_fan_speed"
+      },
+      {
+        "title": {
+          "en": "Set the fan timer",
+          "nl": "Stel de timer in",
+          "de": "Timer einstellen",
+          "fr": "Régler la minuterie"
+        },
+        "titleFormatted": {
+          "en": "Set the fan timer to [[timer]]",
+          "nl": "Stel de timer in op [[timer]]",
+          "de": "Timer auf [[timer]] einstellen",
+          "fr": "Régler la minuterie sur [[timer]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fan|fan-light"
+          },
+          {
+            "type": "dropdown",
+            "name": "timer",
+            "title": {
+              "en": "Timer",
+              "nl": "Timer",
+              "de": "Timer",
+              "fr": "Minuterie"
+            },
+            "values": [
+              {
+                "id": "off",
+                "label": {
+                  "en": "Off",
+                  "nl": "Uit",
+                  "de": "Aus",
+                  "fr": "Désactivé"
+                }
+              },
+              {
+                "id": "2h",
+                "label": {
+                  "en": "2 hours",
+                  "nl": "2 uur",
+                  "de": "2 Stunden",
+                  "fr": "2 heures"
+                }
+              },
+              {
+                "id": "4h",
+                "label": {
+                  "en": "4 hours",
+                  "nl": "4 uur",
+                  "de": "4 Stunden",
+                  "fr": "4 heures"
+                }
+              },
+              {
+                "id": "8h",
+                "label": {
+                  "en": "8 hours",
+                  "nl": "8 uur",
+                  "de": "8 Stunden",
+                  "fr": "8 heures"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_fan_timer"
+      },
+      {
+        "title": {
+          "en": "Toggle the light",
+          "nl": "Schakel de lamp om",
+          "de": "Licht umschalten",
+          "fr": "Basculer la lampe"
+        },
+        "hint": {
+          "en": "Sends the handset's light button, once. It turns the light on or off depending on what it was doing, which the light does not report.",
+          "nl": "Stuurt de lampknop van de handzender, één keer. Dit zet de lamp aan of uit, afhankelijk van wat hij deed; de lamp meldt dat niet terug.",
+          "de": "Sendet die Lichttaste des Handsenders, einmal. Das schaltet die Lampe ein oder aus, je nachdem, was sie gerade tat; die Lampe meldet das nicht zurück.",
+          "fr": "Envoie la touche lampe de la télécommande, une fois. Elle allume ou éteint la lampe selon son état, que la lampe ne signale pas."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=light|light-cr2032|fan-light|fan-light-cr2032"
+          }
+        ],
+        "id": "toggle_light"
+      }
+    ]
+  },
   "drivers": [
     {
       "id": "fan",

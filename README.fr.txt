@@ -11,7 +11,6 @@ Ajoutez le ventilateur, la lampe, ou les deux sur une seule tuile.
 Limites :
 - Le ventilateur et la lampe ne renvoient rien. Homey affiche ce qu'il a envoyé ou entendu en dernier.
 - Le marche/arrêt de la lampe est une touche à bascule. Homey demande à l'ajout si la lampe est allumée, et un bouton corrige l'état s'il dérive.
-- La lampe n'a pas été testée sur un vrai ventilateur.
 - Cette app imite la télécommande en 433 MHz. Elle ne fonctionne pas avec Lucci Connect, le module Wi-Fi vendu séparément.
 
 Non fabriquée, approuvée ni prise en charge par Beacon Lighting ou Lucci.

@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "Make the light brighter",
+    "nl": "Maak de lamp helderder",
+    "de": "Licht heller machen",
+    "fr": "Augmenter la luminosité"
+  },
+  "hint": {
+    "en": "One step brighter. Ignored while the light is off.",
+    "nl": "Eén stap helderder. Genegeerd als de lamp uit is.",
+    "de": "Eine Stufe heller. Wird ignoriert, solange die Lampe aus ist.",
+    "fr": "Un cran plus lumineux. Ignoré tant que la lampe est éteinte."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=light|fan-light"
+    }
+  ]
+}

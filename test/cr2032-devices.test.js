@@ -20,11 +20,17 @@ class FakeDevice {
         this.logs = [];
         this.rejectTx = false;
         this.rxListeners = new Set();
+        this.triggered = [];
 
         this.homey = {
             setTimeout: (...args) => setTimeout(...args),
             clearTimeout: (...args) => clearTimeout(...args),
             __: key => key,
+            flow: {
+                getDeviceTriggerCard: id => ({
+                    trigger: async (device, tokens, state) => { this.triggered.push({ id, value: state.value }); },
+                }),
+            },
             rf: {
                 getSignal433: id => ({
                     id,
@@ -410,4 +416,18 @@ test('the light ignores the fan\'s buttons and other remotes', async () => {
     await hear(device, 'light.toggle', { address: OTHER });
 
     assert.equal(device.lit, false);
+});
+
+// -------------------------------------------------------------- flow triggers --
+
+test('a speed from Homey or from the remote fires the speed trigger, once per change', async () => {
+    const device = await fan({ capabilities: { lucci_speed: '1', onoff: true } });
+    await request(device, { lucci_speed: '3' });
+    await hear(device, 'fan.speed.5');
+    await hear(device, 'fan.speed.5');
+
+    assert.deepEqual(device.triggered, [
+        { id: 'fan_speed_changed', value: '3' },
+        { id: 'fan_speed_changed', value: '5' },
+    ]);
 });

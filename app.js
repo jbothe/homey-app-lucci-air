@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const lucci = require('./lib/lucci-protocol');
+const { registerFlowCards } = require('./lib/flow');
 
 // Ambient 433 MHz traffic occasionally fits our timings. The unrecognised-frame
 // log exists to diagnose a silent receiver, not to narrate the airwaves, so it
@@ -41,6 +42,8 @@ class LucciAirApp extends Homey.App {
         const original = this.receiverFor(lucci);
         this.signal = original.signal;
         this.rxListeners = original.listeners;
+
+        registerFlowCards(this.homey);
 
         this.log('Lucci Air is running...');
     }

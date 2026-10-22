@@ -11,7 +11,6 @@ Fügen Sie den Ventilator, die Lampe oder beides auf einer Kachel hinzu.
 Einschränkungen:
 - Ventilator und Lampe senden nichts zurück. Homey zeigt, was es zuletzt gesendet oder gehört hat.
 - Ein/Aus der Lampe ist eine Umschalttaste. Homey fragt beim Hinzufügen, ob die Lampe an ist, und eine Taste korrigiert den Stand, wenn er nicht mehr stimmt.
-- Die Lampe wurde nicht an einem echten Ventilator getestet.
 - Diese App ahmt den Handsender per 433 MHz nach. Sie funktioniert nicht mit Lucci Connect, dem separaten WLAN-Zusatz.
 
 Nicht von Beacon Lighting oder Lucci hergestellt, empfohlen oder unterstützt.

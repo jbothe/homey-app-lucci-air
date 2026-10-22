@@ -25,9 +25,10 @@ npm run analyse:cr2032                # read captures/fan2-cr2032.txt
 - `app.js` owns the 433 MHz receivers, one per signal, with a reference count. Homey's `enableRX` and
   `disableRX` act on the signal, not on the caller, so the count lives in one place.
 - `lib/` holds the protocols, the pairing base classes, `press-queue.js` (spacing transmissions) and
-  `reflect.js` (deferred capability writes). `lib/light-position.js` is the brightness arithmetic, no Homey.
+  `reflect.js` (deferred capability writes) and `flow.js` (flow card listeners and the change triggers). `lib/light-position.js` is the brightness arithmetic, no Homey.
 - `drivers/<id>/` has `driver.compose.json`, `driver.js`, `device.js`, `pair/` and images.
-- `.homeycompose/` is the source for `app.json`, capabilities and the signal definitions. **`app.json` is
+- `.homeycompose/` is the source for `app.json`, capabilities, flow cards and the signal definitions. Flow
+  cards are app-level and narrowed to drivers by a `driver_id` filter; Homey makes none for custom capabilities. **`app.json` is
   generated; edit `.homeycompose/` and `locales/`.**
 - `tools/` infers a protocol from raw recordings. `test/synth.js` builds synthetic recordings so the
   analyser is tested against a known answer.
@@ -49,7 +50,7 @@ npm run analyse:cr2032                # read captures/fan2-cr2032.txt
 ## Conventions
 
 - Say what is **verified on a fan** and what is only consistent with recordings. Do not upgrade a claim
-  without a hardware result. The USB-C light and the CR2032 light have not been transmitted to a real fan.
+  without a hardware result. The CR2032 light has not been transmitted to a real fan (the USB-C light has).
 - Recordings in `captures/` are gitignored because they carry the code that operates a fan. Never commit one.
 - Four languages (en, nl, de, fr) for everything a user reads: `locales/`, compose files, `README*.txt`.
 - `README.txt` is the store listing: plain text, factual, no marketing language.

@@ -1,0 +1,87 @@
+{
+  "title": {
+    "en": "The fan speed changed to",
+    "nl": "De ventilatorsnelheid is veranderd naar",
+    "de": "Die Lüftergeschwindigkeit hat sich geändert auf",
+    "fr": "La vitesse du ventilateur est passée à"
+  },
+  "titleFormatted": {
+    "en": "The fan speed changed to [[speed]]",
+    "nl": "De ventilatorsnelheid is veranderd naar [[speed]]",
+    "de": "Die Lüftergeschwindigkeit hat sich auf [[speed]] geändert",
+    "fr": "La vitesse du ventilateur est passée à [[speed]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=fan|fan-light|fan-cr2032|fan-light-cr2032"
+    },
+    {
+      "type": "dropdown",
+      "name": "speed",
+      "title": {
+        "en": "Speed",
+        "nl": "Snelheid",
+        "de": "Geschwindigkeit",
+        "fr": "Vitesse"
+      },
+      "values": [
+        {
+          "id": "0",
+          "label": {
+            "en": "Lowest",
+            "nl": "Laagst",
+            "de": "Niedrigste",
+            "fr": "Minimale"
+          }
+        },
+        {
+          "id": "1",
+          "label": {
+            "en": "Low",
+            "nl": "Laag",
+            "de": "Niedrig",
+            "fr": "Faible"
+          }
+        },
+        {
+          "id": "2",
+          "label": {
+            "en": "Medium-low",
+            "nl": "Middellaag",
+            "de": "Mittelniedrig",
+            "fr": "Moyen-faible"
+          }
+        },
+        {
+          "id": "3",
+          "label": {
+            "en": "Medium-high",
+            "nl": "Middelhoog",
+            "de": "Mittelhoch",
+            "fr": "Moyen-élevé"
+          }
+        },
+        {
+          "id": "4",
+          "label": {
+            "en": "High",
+            "nl": "Hoog",
+            "de": "Hoch",
+            "fr": "Élevé"
+          }
+        },
+        {
+          "id": "5",
+          "label": {
+            "en": "Highest",
+            "nl": "Hoogst",
+            "de": "Höchste",
+            "fr": "Maximale"
+          }
+        }
+      ]
+    }
+  ]
+}

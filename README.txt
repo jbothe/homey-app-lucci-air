@@ -11,7 +11,6 @@ Add the fan, the light, or both on one tile.
 Limitations:
 - The fan and light send nothing back. Homey shows what it last sent or heard.
 - The light's on/off is a toggle. Homey asks whether the light is on when you add it, and a button corrects it if it gets out of step.
-- The light has not been tested on a real fan.
 - This app emulates the handset over 433 MHz. It does not work with Lucci Connect, the separate Wi-Fi add-on.
 
 Not made, endorsed or supported by Beacon Lighting or Lucci.

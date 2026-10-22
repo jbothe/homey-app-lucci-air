@@ -9,11 +9,20 @@ button on your own handset so Homey learns its address.
 
 ## Devices
 
+### What you can add
+
+Each remote can be added as a fan, a light, or both on one tile. Each device is paired by pressing a
+button on your own remote.
+
 | | USB-C remote | CR2032 remote (legacy) |
 |---|---|---|
 | fan | Ceiling fan | Ceiling fan (legacy) |
 | light | Fan light | Fan light (legacy) |
 | fan and light on one tile | Ceiling fan + light | Ceiling fan + light (legacy) |
+
+### What each remote controls
+
+The controls each remote has, and so what Homey can do with it.
 
 | | USB-C remote | CR2032 remote |
 |---|---|---|
@@ -32,10 +41,23 @@ on/off or slider.
 | fan on/off and speeds | confirmed on a fan | confirmed on a fan |
 | direction | confirmed on a fan | confirmed on a fan |
 | timer | confirmed on a fan | not on this remote |
-| light | **not tested** | **not tested** (the fan has no light) |
+| light | confirmed on a fan | not tested |
 | receiving the handset | works | works |
 
-Not yet done: flow cards.
+## Flow cards
+
+Homey makes cards for `onoff` and `dim` itself; these cover the rest.
+
+| | cards | devices |
+|---|---|---|
+| fan speed | changed to, is, set | all four fans |
+| direction, timer | changed to, is, set | USB-C fans |
+| change direction | action (a flip, nothing tracked) | CR2032 fans |
+| toggle light | action | lights, and the combined fans |
+| light brighter, dimmer | actions (one step each) | USB-C light and combined fan |
+
+Triggers fire on a change made from Homey or from the handset. They have not been run on a Homey yet;
+the tests cover the card definitions and the code behind them.
 
 ## Development
 
@@ -53,9 +75,6 @@ that operates the fan; see [CONTRIBUTING.md](CONTRIBUTING.md).
 | [RF_PROTOCOL.md](RF_PROTOCOL.md), [RF_PROTOCOL_CR2032.md](RF_PROTOCOL_CR2032.md) | frame layouts, command codes, what is verified |
 | [APP_PLAN.md](APP_PLAN.md) | design decisions and why |
 | [CAPTURE_GUIDE.md](CAPTURE_GUIDE.md), [CAPTURE_GUIDE_CR2032.md](CAPTURE_GUIDE_CR2032.md) | recording a handset |
-
-Sibling apps built the same way: [Heat & Glo RC300](https://github.com/jbothe/homey-heatnglo-rc300),
-[Bear blinds](https://github.com/jbothe/homey-bear-blind-automation).
 
 ## Licence
 

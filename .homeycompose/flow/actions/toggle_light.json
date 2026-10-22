@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "Toggle the light",
+    "nl": "Schakel de lamp om",
+    "de": "Licht umschalten",
+    "fr": "Basculer la lampe"
+  },
+  "hint": {
+    "en": "Sends the handset's light button, once. It turns the light on or off depending on what it was doing, which the light does not report.",
+    "nl": "Stuurt de lampknop van de handzender, één keer. Dit zet de lamp aan of uit, afhankelijk van wat hij deed; de lamp meldt dat niet terug.",
+    "de": "Sendet die Lichttaste des Handsenders, einmal. Das schaltet die Lampe ein oder aus, je nachdem, was sie gerade tat; die Lampe meldet das nicht zurück.",
+    "fr": "Envoie la touche lampe de la télécommande, une fois. Elle allume ou éteint la lampe selon son état, que la lampe ne signale pas."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=light|light-cr2032|fan-light|fan-light-cr2032"
+    }
+  ]
+}

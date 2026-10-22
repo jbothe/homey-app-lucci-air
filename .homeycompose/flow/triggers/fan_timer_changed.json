@@ -1,0 +1,69 @@
+{
+  "title": {
+    "en": "The fan timer changed to",
+    "nl": "De timer is veranderd naar",
+    "de": "Der Timer hat sich geändert auf",
+    "fr": "La minuterie est passée à"
+  },
+  "titleFormatted": {
+    "en": "The fan timer changed to [[timer]]",
+    "nl": "De timer is veranderd naar [[timer]]",
+    "de": "Der Timer hat sich auf [[timer]] geändert",
+    "fr": "La minuterie est passée à [[timer]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=fan|fan-light"
+    },
+    {
+      "type": "dropdown",
+      "name": "timer",
+      "title": {
+        "en": "Timer",
+        "nl": "Timer",
+        "de": "Timer",
+        "fr": "Minuterie"
+      },
+      "values": [
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "nl": "Uit",
+            "de": "Aus",
+            "fr": "Désactivé"
+          }
+        },
+        {
+          "id": "2h",
+          "label": {
+            "en": "2 hours",
+            "nl": "2 uur",
+            "de": "2 Stunden",
+            "fr": "2 heures"
+          }
+        },
+        {
+          "id": "4h",
+          "label": {
+            "en": "4 hours",
+            "nl": "4 uur",
+            "de": "4 Stunden",
+            "fr": "4 heures"
+          }
+        },
+        {
+          "id": "8h",
+          "label": {
+            "en": "8 hours",
+            "nl": "8 uur",
+            "de": "8 Stunden",
+            "fr": "8 heures"
+          }
+        }
+      ]
+    }
+  ]
+}

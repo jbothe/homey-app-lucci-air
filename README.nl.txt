@@ -11,7 +11,6 @@ Voeg de ventilator, de lamp of allebei op één tegel toe.
 Beperkingen:
 - De ventilator en de lamp sturen niets terug. Homey toont wat het het laatst heeft verstuurd of gehoord.
 - Aan/uit van de lamp is een wisselschakelaar. Homey vraagt bij het toevoegen of de lamp aan is, en een knop zet het recht als het niet meer klopt.
-- De lamp is niet getest op een echte ventilator.
 - Deze app bootst de handzender na via 433 MHz. Hij werkt niet met Lucci Connect, de losse wifi-uitbreiding.
 
 Niet gemaakt, goedgekeurd of ondersteund door Beacon Lighting of Lucci.

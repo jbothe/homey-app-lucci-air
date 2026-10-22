@@ -1,0 +1,51 @@
+{
+  "title": {
+    "en": "The fan direction is",
+    "nl": "De draairichting is",
+    "de": "Die Drehrichtung ist",
+    "fr": "Le sens de rotation est"
+  },
+  "titleFormatted": {
+    "en": "The fan direction !{{is|is not}} [[direction]]",
+    "nl": "De draairichting !{{is|is niet}} [[direction]]",
+    "de": "Die Drehrichtung !{{ist|ist nicht}} [[direction]]",
+    "fr": "Le sens de rotation !{{est|n'est pas}} [[direction]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=fan|fan-light"
+    },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": {
+        "en": "Direction",
+        "nl": "Draairichting",
+        "de": "Drehrichtung",
+        "fr": "Sens"
+      },
+      "values": [
+        {
+          "id": "forward",
+          "label": {
+            "en": "Forward",
+            "nl": "Vooruit",
+            "de": "Vorwärts",
+            "fr": "Avant"
+          }
+        },
+        {
+          "id": "reverse",
+          "label": {
+            "en": "Reverse",
+            "nl": "Achteruit",
+            "de": "Rückwärts",
+            "fr": "Arrière"
+          }
+        }
+      ]
+    }
+  ]
+}

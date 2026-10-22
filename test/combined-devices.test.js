@@ -23,11 +23,17 @@ class FakeDevice {
         this.logs = [];
         this.rejectTx = false;
         this.rxListeners = new Set();
+        this.triggered = [];
 
         this.homey = {
             setTimeout: (...args) => setTimeout(...args),
             clearTimeout: (...args) => clearTimeout(...args),
             __: key => key,
+            flow: {
+                getDeviceTriggerCard: id => ({
+                    trigger: async (device, tokens, state) => { this.triggered.push({ id, value: state.value }); },
+                }),
+            },
             rf: {
                 getSignal433: () => ({
                     tx: async payload => {

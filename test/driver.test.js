@@ -19,6 +19,11 @@ function homeyStub() {
         // Homey's __ takes either a locale key or an object of translations, and
         // the driver manifest's name is the latter.
         __: key => (typeof key === 'string' ? key : key.en),
+        flow: {
+            getDeviceTriggerCard: () => ({ registerRunListener: () => {} }),
+            getConditionCard: () => ({ registerRunListener: () => {} }),
+            getActionCard: () => ({ registerRunListener: () => {} }),
+        },
         rf: {
             getSignal433: () => {
                 state.signalsMade += 1;

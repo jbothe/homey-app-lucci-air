@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "Change the fan direction",
+    "nl": "Wijzig de draairichting",
+    "de": "Drehrichtung ändern",
+    "fr": "Changer le sens de rotation"
+  },
+  "hint": {
+    "en": "Sends the remote's reverse button, which flips the direction once. The remote does not say which way the fan turns, so Homey cannot show it.",
+    "nl": "Stuurt de omkeerknop van de afstandsbediening, die de draairichting één keer omdraait. De afstandsbediening meldt niet welke kant de ventilator draait, dus Homey kan dat niet tonen.",
+    "de": "Sendet die Umkehrtaste der Fernbedienung, die die Drehrichtung einmal umkehrt. Die Fernbedienung meldet nicht, in welche Richtung sich der Ventilator dreht, daher kann Homey sie nicht anzeigen.",
+    "fr": "Envoie la touche d'inversion de la télécommande, qui inverse le sens une fois. La télécommande n'indique pas le sens de rotation, Homey ne peut donc pas l'afficher."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=fan-cr2032|fan-light-cr2032"
+    }
+  ]
+}

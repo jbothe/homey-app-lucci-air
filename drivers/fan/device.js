@@ -6,6 +6,7 @@ const {
 } = require('../../lib/lucci-protocol');
 const { reflect } = require('../../lib/reflect');
 const { pressQueue } = require('../../lib/press-queue');
+const { announceChange } = require('../../lib/flow');
 
 // The speed a fan starts on when it has never been given one.
 //
@@ -139,6 +140,7 @@ class LucciAirFanDevice extends Homey.Device {
         this.registerCapabilityListener('lucci_direction', async value => {
             this.on = true;
             await this.send(`fan.direction.${value}`, 'lucci_direction');
+            if (this.getCapabilityValue('lucci_direction') !== value) announceChange(this, 'lucci_direction', value);
             reflect(this, { onoff: true }, { lucci_direction: value });
         });
 
@@ -148,6 +150,7 @@ class LucciAirFanDevice extends Homey.Device {
         // mirror of the bug that had the tile stuck off while it ran.
         this.registerCapabilityListener('lucci_timer', async value => {
             await this.send(`fan.timer.${value}`, 'lucci_timer');
+            if (this.getCapabilityValue('lucci_timer') !== value) announceChange(this, 'lucci_timer', value);
 
             // Asked at the only moment it can be answered: a timer code has
             // just gone out to a fan that was stopped, which is the experiment.
@@ -192,7 +195,9 @@ class LucciAirFanDevice extends Homey.Device {
     // have been failing all along and saying nothing.
     async set(capability, value) {
         try {
+            const before = this.getCapabilityValue(capability);
             await this.setCapabilityValue(capability, value);
+            if (before !== value) announceChange(this, capability, value);
             return true;
         } catch (err) {
             this.error(`could not set ${capability} to ${JSON.stringify(value)}:`, err.message);
@@ -265,6 +270,10 @@ class LucciAirFanDevice extends Homey.Device {
         this.step = step;
 
         await this.send(`fan.speed.${step}`, why);
+
+        // A value Homey asked for is written by Homey after this resolves, so
+        // `set` never sees it change; the Flow trigger is fired from here.
+        if (asked !== undefined && this.getCapabilityValue('lucci_speed') !== asked) announceChange(this, 'lucci_speed', asked);
 
         // The fan is now running, whichever capability asked for it. Homey sets
         // the ones that were requested once this resolves, so the work here is

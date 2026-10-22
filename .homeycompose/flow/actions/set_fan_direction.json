@@ -1,0 +1,51 @@
+{
+  "title": {
+    "en": "Set the fan direction",
+    "nl": "Stel de draairichting in",
+    "de": "Drehrichtung einstellen",
+    "fr": "Régler le sens de rotation"
+  },
+  "titleFormatted": {
+    "en": "Set the fan direction to [[direction]]",
+    "nl": "Stel de draairichting in op [[direction]]",
+    "de": "Drehrichtung auf [[direction]] einstellen",
+    "fr": "Régler le sens de rotation sur [[direction]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=fan|fan-light"
+    },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": {
+        "en": "Direction",
+        "nl": "Draairichting",
+        "de": "Drehrichtung",
+        "fr": "Sens"
+      },
+      "values": [
+        {
+          "id": "forward",
+          "label": {
+            "en": "Forward",
+            "nl": "Vooruit",
+            "de": "Vorwärts",
+            "fr": "Avant"
+          }
+        },
+        {
+          "id": "reverse",
+          "label": {
+            "en": "Reverse",
+            "nl": "Achteruit",
+            "de": "Rückwärts",
+            "fr": "Arrière"
+          }
+        }
+      ]
+    }
+  ]
+}

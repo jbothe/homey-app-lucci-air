@@ -15,6 +15,11 @@ function homeyStub() {
     const signals = new Map();
     const homey = {
         __: key => (typeof key === 'string' ? key : key.en),
+        flow: {
+            getDeviceTriggerCard: () => ({ registerRunListener: () => {} }),
+            getConditionCard: () => ({ registerRunListener: () => {} }),
+            getActionCard: () => ({ registerRunListener: () => {} }),
+        },
         rf: {
             getSignal433: id => {
                 if (!signals.has(id)) {
