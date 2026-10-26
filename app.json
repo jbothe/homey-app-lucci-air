@@ -84,7 +84,6 @@
   "bugs": {
     "url": "https://github.com/jbothe/homey-app-lucci-air/issues"
   },
-  "support": "https://github.com/jbothe/homey-app-lucci-air/issues",
   "source": "https://github.com/jbothe/homey-app-lucci-air",
   "flow": {
     "triggers": [
