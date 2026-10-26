@@ -1,17 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" width="960" height="960">
-    <!-- The fan's lamp: a bulb, glass pinching into a screw base. -->
-    <g fill="#1E1E1E">
+    <!-- The fan's lamp: a bulb, glass pinching into a screw base, drawn as outlines. -->
+    <g fill="none" stroke="#1E1E1E" stroke-width="30" stroke-linejoin="round" stroke-linecap="round">
         <path d="M328,549
                  C376,583 357,639 357,677
                  L603,677
                  C603,639 584,583 632,549
                  A265,265 0 1 0 328,549 Z"/>
-        <path d="M357,668
-                 L603,668
-                 L603,744
-                 Q603,774 573,774
-                 L387,774
-                 Q357,774 357,744 Z"/>
-        <rect x="391" y="796" width="178" height="93" rx="36"/>
+        <path d="M357,677 L357,744 Q357,774 387,774 L573,774 Q603,774 603,744 L603,677"/>
+        <rect x="391" y="808" width="178" height="81" rx="36"/>
     </g>
 </svg>
