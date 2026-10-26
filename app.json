@@ -73,6 +73,14 @@
     "name": "John Bothe",
     "email": "jbothe@gmail.com"
   },
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "email": "jbothe@gmail.com",
+        "currency": "AUD"
+      }
+    }
+  },
   "bugs": {
     "url": "https://github.com/jbothe/homey-app-lucci-air/issues"
   },
